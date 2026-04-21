@@ -1,0 +1,2438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LCG × Fink's Taxonomy — Executive Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@3.1.0/dist/chartjs-chart-treemap.min.js"></script>
+<style>
+/* ============================= DESIGN TOKENS ============================= */
+:root {
+  --bg: #F6F5F1;
+  --surface: #FFFFFF;
+  --surface-2: #FAFAF7;
+  --surface-3: #F1EFEA;
+  --ink: #18162A;
+  --ink-soft: #4A4768;
+  --ink-mute: #7B7794;
+  --line: #E6E3DC;
+  --line-soft: #EFEDE7;
+
+  --primary: #3D3A8C;
+  --primary-ink: #FFFFFF;
+  --primary-tint: #E9E8F5;
+  --primary-deep: #2A2766;
+  --accent: #C88A2E;
+  --accent-tint: #F6EBD4;
+
+  /* Fink categorical palette — used identically everywhere */
+  --fk-foundational: #2E5EAA;
+  --fk-application: #1A8F89;
+  --fk-integration: #7A4BAA;
+  --fk-human: #C94B7E;
+  --fk-caring: #D88A2E;
+  --fk-learning: #4B9A5E;
+
+  /* LCG palette */
+  --lcg-learn: #3D3A8C;
+  --lcg-change: #C88A2E;
+  --lcg-grow: #4B9A5E;
+
+  --shadow-sm: 0 1px 2px rgba(24,22,42,.05), 0 1px 3px rgba(24,22,42,.04);
+  --shadow-md: 0 2px 4px rgba(24,22,42,.04), 0 8px 24px rgba(24,22,42,.06);
+  --shadow-lg: 0 8px 16px rgba(24,22,42,.05), 0 24px 48px rgba(24,22,42,.08);
+
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 18px;
+
+  --font-display: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+[data-theme="dark"] {
+  --bg: #0F0E1A;
+  --surface: #181629;
+  --surface-2: #1F1D33;
+  --surface-3: #26243C;
+  --ink: #F2F0FA;
+  --ink-soft: #C9C6DE;
+  --ink-mute: #8A87A8;
+  --line: #2C2A44;
+  --line-soft: #24223A;
+  --primary: #8A86E8;
+  --primary-ink: #0F0E1A;
+  --primary-tint: #2A2864;
+  --primary-deep: #B9B6F0;
+  --accent: #E7B661;
+  --accent-tint: #3D2E13;
+  --fk-foundational: #6D9EE8;
+  --fk-application: #49C7C0;
+  --fk-integration: #B488E3;
+  --fk-human: #E87DA6;
+  --fk-caring: #E7B661;
+  --fk-learning: #7BC490;
+  --lcg-learn: #8A86E8;
+  --lcg-change: #E7B661;
+  --lcg-grow: #7BC490;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.25);
+  --shadow-md: 0 2px 4px rgba(0,0,0,.25), 0 8px 24px rgba(0,0,0,.2);
+  --shadow-lg: 0 8px 16px rgba(0,0,0,.25), 0 24px 48px rgba(0,0,0,.3);
+}
+
+/* ============================= BASE ============================= */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
+  min-height: 100vh;
+}
+.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, select { font-family: inherit; color: inherit; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-mute); }
+
+/* ============================= LAYOUT ============================= */
+.shell { max-width: 1440px; margin: 0 auto; padding: 32px 28px 120px; }
+
+/* ============================= HEADER ============================= */
+.masthead {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;
+  padding-bottom: 28px; border-bottom: 1px solid var(--line); margin-bottom: 28px;
+}
+.mast-brand { display: flex; align-items: flex-start; gap: 16px; }
+.mast-mark {
+  width: 52px; height: 52px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
+  color: #fff; display: grid; place-items: center; flex-shrink: 0;
+  font-family: var(--font-mono); font-weight: 600; font-size: 15px; letter-spacing: .04em;
+  box-shadow: var(--shadow-md);
+}
+.mast-mark span { display: block; line-height: 1; }
+.mast-eyebrow {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--ink-mute); font-weight: 500;
+  margin-bottom: 6px;
+}
+.mast-title {
+  font-size: 26px; line-height: 1.15; font-weight: 700; letter-spacing: -.02em;
+  margin: 0 0 6px; color: var(--ink); max-width: 820px;
+}
+.mast-title em { font-style: normal; color: var(--primary); }
+.mast-sub { color: var(--ink-soft); font-size: 13.5px; max-width: 760px; }
+.mast-sub strong { color: var(--ink); font-weight: 600; }
+.mast-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.btn-icon {
+  width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink-soft);
+  transition: all .15s ease;
+}
+.btn-icon:hover { background: var(--surface-2); color: var(--ink); border-color: var(--ink-mute); }
+.btn-icon svg { width: 18px; height: 18px; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 14px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink);
+  font-size: 12.5px; font-weight: 500; letter-spacing: .01em;
+  transition: all .15s ease;
+}
+.btn:hover { background: var(--surface-2); border-color: var(--ink-mute); }
+.btn-primary { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-deep); border-color: var(--primary-deep); }
+.btn svg { width: 14px; height: 14px; }
+
+/* ============================= KPI STRIP ============================= */
+.kpi-wrap { margin-bottom: 20px; }
+.kpi-row {
+  display: grid; grid-template-columns: repeat(8, 1fr); gap: 12px;
+}
+.kpi-row.secondary { grid-template-columns: repeat(6, 1fr); margin-top: 12px; }
+.kpi {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px 16px 14px; position: relative; overflow: hidden;
+  transition: border-color .15s ease, transform .15s ease;
+}
+.kpi:hover { border-color: var(--ink-mute); }
+.kpi-label {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-mute); font-weight: 500;
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+.kpi-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--primary); }
+.kpi-val {
+  font-size: 32px; font-weight: 700; letter-spacing: -.02em; line-height: 1;
+  color: var(--ink);
+}
+.kpi-val .pct { font-size: 14px; font-weight: 500; color: var(--ink-mute); margin-left: 4px; letter-spacing: 0; }
+.kpi-cap { font-size: 11.5px; color: var(--ink-mute); margin-top: 8px; }
+.kpi-accent {
+  position: absolute; top: 0; right: 0; width: 3px; height: 100%;
+}
+.kpi.hero { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%); color: #fff; border-color: transparent; }
+.kpi.hero .kpi-label { color: rgba(255,255,255,.7); }
+.kpi.hero .kpi-val { color: #fff; }
+.kpi.hero .kpi-cap { color: rgba(255,255,255,.72); }
+.kpi.hero .kpi-dot { background: var(--accent); }
+
+.kpi-mini {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px 14px 12px; position: relative;
+}
+.kpi-mini .kpi-label { margin-bottom: 8px; }
+.kpi-mini .kpi-val { font-size: 24px; }
+.kpi-mini .kpi-bar {
+  height: 3px; border-radius: 2px; background: var(--line-soft); margin-top: 10px; overflow: hidden;
+}
+.kpi-mini .kpi-bar > div { height: 100%; border-radius: 2px; transition: width .3s ease; }
+
+/* Top Minor pills */
+.top-minor-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px 16px; margin-top: 12px;
+}
+.top-minor-head {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+}
+.top-minor-head h4 {
+  margin: 0; font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-mute); font-family: var(--font-mono); font-weight: 500;
+}
+.top-minor-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px 6px 10px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--line);
+  font-size: 12.5px; color: var(--ink); font-weight: 500;
+  transition: all .15s ease;
+}
+.pill:hover { background: var(--surface-3); border-color: var(--ink-mute); cursor: pointer; }
+.pill-sw { width: 8px; height: 8px; border-radius: 50%; }
+.pill-count {
+  margin-left: 6px; padding: 2px 7px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line);
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-mute); font-weight: 500;
+}
+
+/* ============================= FILTER BAR ============================= */
+.filterbar {
+  position: sticky; top: 0; z-index: 40;
+  background: var(--bg);
+  padding: 16px 0 14px; margin: 0 -28px 24px; padding-left: 28px; padding-right: 28px;
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+}
+.filterbar-inner {
+  max-width: 1440px; margin: 0 auto;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.filterbar-label {
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-mute); font-weight: 500;
+  margin-right: 4px;
+}
+.dd {
+  position: relative; display: inline-block;
+}
+.dd-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--line);
+  font-size: 12.5px; color: var(--ink); font-weight: 500;
+  transition: all .15s ease;
+  min-height: 34px;
+}
+.dd-btn:hover { border-color: var(--ink-mute); }
+.dd-btn.active { border-color: var(--primary); background: var(--primary-tint); color: var(--primary); }
+[data-theme="dark"] .dd-btn.active { color: var(--primary-deep); }
+.dd-btn .chev {
+  width: 10px; height: 10px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translate(-1px, -1px); opacity: .7;
+}
+.dd-btn .badge {
+  background: var(--primary); color: var(--primary-ink); font-family: var(--font-mono);
+  font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 999px; margin-left: 2px;
+}
+.dd-panel {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 50;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  min-width: 260px; max-width: 360px; max-height: 420px; overflow: auto;
+  padding: 6px; display: none;
+}
+.dd-panel.show { display: block; }
+.dd-search {
+  width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface-2); font-size: 12.5px; color: var(--ink);
+  margin-bottom: 6px; outline: none;
+}
+.dd-search:focus { border-color: var(--primary); }
+.dd-group-head {
+  padding: 8px 10px 4px; font-family: var(--font-mono); font-size: 10px;
+  color: var(--ink-mute); letter-spacing: .12em; text-transform: uppercase;
+  font-weight: 500; display: flex; align-items: center; gap: 6px;
+}
+.dd-group-head .sw { width: 8px; height: 8px; border-radius: 50%; }
+.dd-opt {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px; border-radius: 8px; cursor: pointer;
+  font-size: 13px; color: var(--ink); user-select: none;
+}
+.dd-opt:hover { background: var(--surface-2); }
+.dd-opt.disabled { opacity: .4; cursor: not-allowed; }
+.dd-opt input { accent-color: var(--primary); }
+.dd-opt .n {
+  margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--ink-mute);
+}
+
+.chipbar {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  margin-left: auto;
+}
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 4px 4px 10px; border-radius: 999px;
+  background: var(--primary-tint); color: var(--primary); border: 1px solid transparent;
+  font-size: 11.5px; font-weight: 500;
+}
+[data-theme="dark"] .chip { color: var(--primary-deep); }
+.chip button {
+  width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--primary); color: var(--primary-ink); font-size: 12px; line-height: 1;
+}
+.chip button:hover { background: var(--primary-deep); }
+[data-theme="dark"] .chip button { color: #0F0E1A; }
+
+.chip-clear {
+  padding: 6px 10px; border-radius: 999px;
+  background: transparent; border: 1px dashed var(--line);
+  font-size: 11.5px; color: var(--ink-mute);
+}
+.chip-clear:hover { color: var(--ink); border-color: var(--ink-mute); }
+
+/* ============================= INSIGHTS ============================= */
+.insights {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
+  color: #fff; border-radius: var(--radius-lg); padding: 22px 26px;
+  margin-bottom: 24px; position: relative; overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+.insights::before {
+  content: ""; position: absolute; right: -60px; top: -60px;
+  width: 260px; height: 260px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(200,138,46,.25), transparent 60%);
+}
+.insights-head {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .16em;
+  text-transform: uppercase; color: rgba(255,255,255,.75); font-weight: 500;
+}
+.insights-head::before {
+  content: ""; width: 16px; height: 2px; background: var(--accent); display: inline-block;
+}
+.insights-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 28px;
+  position: relative; z-index: 1;
+}
+.ins-item {
+  font-size: 13.5px; color: rgba(255,255,255,.92); line-height: 1.5;
+}
+.ins-item strong { color: #fff; font-weight: 600; }
+.ins-item .ins-num {
+  display: inline-block; font-family: var(--font-mono); font-weight: 600;
+  color: var(--accent); font-size: 13.5px;
+}
+.ins-item .ins-lbl {
+  display: block; font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .14em;
+  text-transform: uppercase; color: rgba(255,255,255,.55); margin-bottom: 4px;
+}
+
+/* ============================= SECTIONS ============================= */
+.section-head {
+  display: flex; align-items: baseline; gap: 14px; margin: 32px 0 14px;
+}
+.section-head h2 {
+  margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -.005em; color: var(--ink);
+}
+.section-head .eyebrow {
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .18em;
+  text-transform: uppercase; color: var(--ink-mute); font-weight: 500;
+}
+.section-head .rule { flex: 1; height: 1px; background: var(--line); }
+
+.grid {
+  display: grid; gap: 16px;
+}
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.span-2 { grid-column: span 2; }
+
+/* ============================= CHART CARDS ============================= */
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 18px 20px 18px; display: flex; flex-direction: column;
+  position: relative; transition: border-color .15s ease;
+}
+.card:hover { border-color: var(--ink-mute); }
+.card-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  margin-bottom: 14px;
+}
+.card-title-wrap { flex: 1; min-width: 0; }
+.card-title {
+  margin: 0; font-size: 13.5px; font-weight: 600; letter-spacing: -.005em; color: var(--ink);
+  display: flex; align-items: center; gap: 8px;
+}
+.card-cap {
+  font-size: 11.5px; color: var(--ink-mute); margin-top: 4px; line-height: 1.45;
+}
+.card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.card-action {
+  width: 26px; height: 26px; border-radius: 7px;
+  display: grid; place-items: center; color: var(--ink-mute);
+  transition: all .15s ease; border: 1px solid transparent;
+}
+.card-action:hover { background: var(--surface-2); color: var(--ink); border-color: var(--line); }
+.card-action svg { width: 13px; height: 13px; }
+
+.card-body { position: relative; flex: 1; min-height: 220px; }
+.card-body.h-sm { min-height: 200px; height: 220px; }
+.card-body.h-md { min-height: 260px; height: 280px; }
+.card-body.h-lg { min-height: 320px; height: 340px; }
+
+.empty {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  color: var(--ink-mute); font-size: 12.5px; font-style: italic; text-align: center; padding: 20px;
+  pointer-events: none;
+}
+
+/* Chart.js canvas sizing */
+.card-body canvas { max-width: 100%; }
+
+/* Data-view toggle */
+.data-view {
+  display: none; overflow: auto; max-height: 100%;
+  font-family: var(--font-mono); font-size: 11.5px;
+}
+.data-view.show { display: block; }
+.data-view table { width: 100%; border-collapse: collapse; }
+.data-view th, .data-view td {
+  padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--line-soft);
+}
+.data-view th { color: var(--ink-mute); font-weight: 500; position: sticky; top: 0; background: var(--surface); }
+.data-view td.num-cell { text-align: right; }
+
+/* ============================= HEATMAPS (custom grid) ============================= */
+.heatmap {
+  display: grid; gap: 2px;
+  height: 100%; width: 100%;
+  font-family: var(--font-mono); font-size: 10.5px;
+}
+.heat-corner { background: transparent; }
+.heat-row-lbl, .heat-col-lbl {
+  color: var(--ink-mute); font-size: 10px; letter-spacing: .05em;
+  display: flex; align-items: center; padding: 0 6px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.heat-col-lbl { justify-content: center; text-align: center; padding: 4px 2px; line-height: 1.1; }
+.heat-row-lbl { justify-content: flex-end; font-size: 11px; color: var(--ink); font-weight: 500; padding-right: 10px; font-family: var(--font-display); }
+.heat-cell {
+  border-radius: 5px; display: grid; place-items: center;
+  color: var(--ink); font-weight: 600; font-size: 11.5px;
+  transition: transform .12s ease, box-shadow .12s ease;
+  cursor: pointer; position: relative;
+  font-family: var(--font-display);
+}
+.heat-cell:hover { transform: scale(1.06); box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--ink-soft); z-index: 5; }
+.heat-cell[data-v="0"] { background: var(--surface-3); color: var(--ink-mute); font-weight: 400; }
+
+/* Small multiples */
+.small-mult { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; height: 100%; }
+.sm-panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.sm-title { font-size: 11px; font-family: var(--font-mono); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-mute); margin-bottom: 6px; font-weight: 500; }
+.sm-body { flex: 1; min-height: 0; position: relative; }
+
+/* ============================= PARTICIPANT BAR ============================= */
+.participant-chart {
+  height: 100%; display: flex; flex-direction: column; gap: 4px; padding-right: 4px; overflow-y: auto;
+}
+.pp-row {
+  display: grid; grid-template-columns: 36px 1fr 36px; align-items: center; gap: 10px;
+  padding: 2px 0;
+}
+.pp-id {
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-soft);
+  text-align: right; font-weight: 500;
+}
+.pp-bar {
+  height: 14px; border-radius: 4px; background: var(--surface-3);
+  display: flex; overflow: hidden; position: relative;
+}
+.pp-seg { height: 100%; transition: width .25s ease; }
+.pp-count {
+  font-family: var(--font-mono); font-size: 11px; color: var(--ink-soft); font-weight: 500;
+}
+
+/* ============================= EVIDENCE GALLERY ============================= */
+.evidence-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  margin-top: 8px;
+}
+.ev-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 14px;
+  position: relative; overflow: hidden; transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.ev-card::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--ev-accent, var(--primary));
+}
+.ev-card:hover {
+  border-color: var(--ink-mute); transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+.ev-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.ev-id {
+  font-family: var(--font-mono); font-size: 11.5px; font-weight: 600;
+  color: var(--primary); letter-spacing: .02em;
+}
+[data-theme="dark"] .ev-id { color: var(--primary-deep); }
+.ev-meta {
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-mute);
+  letter-spacing: .03em;
+}
+.ev-meta::before { content: "·"; margin: 0 6px; opacity: .5; }
+.ev-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-left: auto; }
+.ev-tag {
+  padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 500;
+  font-family: var(--font-mono); white-space: nowrap;
+}
+.ev-dual-badge {
+  display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 9.5px;
+  background: var(--accent-tint); color: var(--accent); font-family: var(--font-mono);
+  font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+}
+.ev-quote {
+  position: relative; font-family: Georgia, 'Times New Roman', serif;
+  font-size: 14.5px; line-height: 1.6; color: var(--ink); font-style: italic;
+  padding: 4px 0 4px 22px; margin: 0;
+}
+.ev-quote::before {
+  content: "\201C"; position: absolute; left: -2px; top: -8px;
+  font-size: 44px; line-height: 1; font-style: normal; font-family: Georgia, serif;
+  color: var(--ev-accent, var(--primary)); opacity: .45; font-weight: 700;
+}
+.ev-quote.clipped {
+  display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ev-expand {
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--primary);
+  cursor: pointer; letter-spacing: .06em; text-transform: uppercase; font-weight: 500;
+  align-self: flex-start; margin-top: -6px; padding: 2px 0;
+}
+[data-theme="dark"] .ev-expand { color: var(--primary-deep); }
+.ev-expand:hover { text-decoration: underline; }
+.ev-minor {
+  font-size: 11.5px; color: var(--ink-soft); font-weight: 500;
+}
+.ev-rationale {
+  border-top: 1px dashed var(--line); padding-top: 12px; margin-top: 2px;
+  font-size: 12.5px; line-height: 1.55; color: var(--ink-soft);
+}
+.ev-rationale h6 {
+  margin: 0 0 6px; font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink-mute); font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+}
+.ev-rationale h6::before { content: ""; width: 10px; height: 1px; background: var(--ink-mute); display: inline-block; }
+.ev-verbs {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;
+}
+.ev-verb {
+  font-family: var(--font-mono); font-size: 10px; padding: 2px 7px;
+  background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 4px;
+  color: var(--ink-soft); letter-spacing: .02em;
+}
+.ev-dual-line {
+  padding: 8px 10px; background: var(--accent-tint); border-radius: 7px;
+  font-size: 11.5px; color: var(--ink-soft); margin-top: 2px;
+  border-left: 2px solid var(--accent);
+}
+.ev-dual-line strong { color: var(--ink); }
+
+.ev-controls {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.ev-info {
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-mute);
+}
+.ev-sort {
+  display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--ink-soft);
+}
+.ev-sort select {
+  padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface-2); font-size: 11.5px; color: var(--ink); font-family: inherit;
+}
+.ev-empty {
+  grid-column: 1 / -1;
+  padding: 60px 20px; text-align: center; color: var(--ink-mute);
+  font-style: italic; font-size: 13px;
+  border: 1px dashed var(--line); border-radius: var(--radius);
+}
+
+@media (max-width: 1100px) {
+  .evidence-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .evidence-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================= DATA TABLE ============================= */
+.table-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px 20px 4px; margin-top: 16px;
+}
+.table-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap; margin-bottom: 16px;
+}
+.table-head .left { display: flex; align-items: baseline; gap: 12px; }
+.table-head h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.table-head .count {
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-mute);
+  padding: 3px 9px; border-radius: 999px; background: var(--surface-2);
+}
+.table-search {
+  padding: 8px 12px 8px 34px; border-radius: 10px;
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--ink);
+  font-size: 12.5px; outline: none; min-width: 260px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%237B7794' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 12px 50%;
+}
+.table-search:focus { border-color: var(--primary); }
+
+.dtable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.dtable thead th {
+  text-align: left; padding: 10px 12px; background: var(--surface-2);
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-mute); font-weight: 500;
+  border-bottom: 1px solid var(--line); cursor: pointer; user-select: none;
+  white-space: nowrap; position: sticky; top: 0;
+}
+.dtable thead th:first-child { border-top-left-radius: 10px; }
+.dtable thead th:last-child { border-top-right-radius: 10px; }
+.dtable thead th.sorted::after { content: " ↓"; color: var(--primary); }
+.dtable thead th.sorted.asc::after { content: " ↑"; }
+.dtable tbody tr { border-bottom: 1px solid var(--line-soft); transition: background .1s; }
+.dtable tbody tr:hover { background: var(--surface-2); cursor: pointer; }
+.dtable tbody td { padding: 10px 12px; vertical-align: top; color: var(--ink); }
+.dtable tbody td.idcol { font-family: var(--font-mono); font-weight: 500; color: var(--primary); font-size: 11.5px; }
+[data-theme="dark"] .dtable tbody td.idcol { color: var(--primary-deep); }
+.dtable tbody td.num-cell { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-soft); }
+.dtable tbody td .tag {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 500; font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.dtable .dual-badge {
+  display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; margin-left: 4px;
+  background: var(--accent-tint); color: var(--accent); font-family: var(--font-mono); font-weight: 600;
+}
+.dtable .excerpt-cell { max-width: 340px; min-width: 220px; }
+.dtable .excerpt-quote {
+  font-family: Georgia, 'Times New Roman', serif; font-style: italic;
+  font-size: 12px; color: var(--ink-soft); line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.row-expand {
+  background: var(--surface-2); padding: 0;
+  animation: slideDown .2s ease;
+}
+@keyframes slideDown { from { opacity: 0; } to { opacity: 1; } }
+.row-expand td { padding: 16px 20px; }
+.expand-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.expand-block h5 {
+  margin: 0 0 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-mute); font-weight: 500;
+}
+.expand-block p {
+  margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-soft);
+  font-family: Georgia, 'Times New Roman', serif; font-style: italic;
+}
+.expand-block p.rationale { font-family: var(--font-display); font-style: normal; }
+.expand-dual {
+  grid-column: 1 / -1; margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--line);
+  font-size: 12px; color: var(--ink-soft);
+}
+.expand-dual strong { color: var(--ink); }
+
+.pager {
+  display: flex; align-items: center; justify-content: space-between; padding: 12px 0;
+  margin-top: 8px; font-size: 12px; color: var(--ink-mute);
+}
+.pager-btns { display: flex; gap: 4px; }
+.pager-btn {
+  width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
+  color: var(--ink-soft); border: 1px solid var(--line); background: var(--surface);
+  font-size: 12px;
+}
+.pager-btn:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
+.pager-btn:disabled { opacity: .35; cursor: not-allowed; }
+.pager-btn.active { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+
+/* ============================= TOOLTIP (shared) ============================= */
+.floating-tt {
+  position: fixed; z-index: 100; pointer-events: none;
+  background: var(--ink); color: var(--bg); padding: 8px 11px; border-radius: 8px;
+  font-size: 11.5px; font-family: var(--font-mono); line-height: 1.45;
+  box-shadow: var(--shadow-md); opacity: 0; transform: translateY(4px);
+  transition: opacity .1s ease, transform .1s ease;
+  max-width: 240px;
+}
+.floating-tt.show { opacity: 1; transform: translateY(0); }
+.floating-tt .tt-ttl { font-family: var(--font-display); font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+.floating-tt .tt-sub { font-size: 10.5px; opacity: .7; }
+
+/* ============================= TOAST ============================= */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px;
+  font-size: 12.5px; font-weight: 500; z-index: 200; opacity: 0; pointer-events: none;
+  transition: all .2s ease; box-shadow: var(--shadow-lg);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ============================= FOOTER ============================= */
+.foot {
+  margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line);
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11.5px; color: var(--ink-mute);
+  font-family: var(--font-mono);
+}
+
+/* ============================= RESPONSIVE ============================= */
+@media (max-width: 1200px) {
+  .kpi-row { grid-template-columns: repeat(4, 1fr); }
+  .kpi-row.secondary { grid-template-columns: repeat(3, 1fr); }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .span-2 { grid-column: span 2; }
+}
+@media (max-width: 820px) {
+  .shell { padding: 20px 16px 80px; }
+  .filterbar { margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .span-2 { grid-column: span 1; }
+  .masthead { flex-direction: column; }
+  .mast-title { font-size: 22px; }
+  .small-mult { grid-template-columns: 1fr; }
+  .expand-grid { grid-template-columns: 1fr; }
+  .table-search { min-width: 0; width: 100%; }
+  .dtable { font-size: 11.5px; }
+  .dtable thead th:nth-child(n+5), .dtable tbody td:nth-child(n+5) { display: none; }
+  .dtable .excerpt-cell { display: none !important; }
+}
+@media (max-width: 500px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .kpi-row.secondary { grid-template-columns: repeat(2, 1fr); }
+  .mast-actions { flex-wrap: wrap; }
+}
+
+/* Print-friendly tweaks */
+@media print {
+  .filterbar, .card-actions, .table-search, .pager, .mast-actions { display: none !important; }
+  body { background: #fff; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ===================== MASTHEAD ===================== -->
+  <header class="masthead">
+    <div class="mast-brand">
+      <div class="mast-mark"><span>LCG</span><span>/FK</span></div>
+      <div>
+        <div class="mast-eyebrow">Qualitative Coding Dashboard · Cohort Analysis</div>
+        <h1 class="mast-title">Learn–Change–Grow <em>×</em> Fink's Taxonomy of Significant Learning</h1>
+        <p class="mast-sub">
+          <strong>350</strong> weekly reflections from a doctoral cohort (33 students, 12 weeks) coded against
+          Fink's six-category framework, yielding <strong>148 selected exemplars</strong> from
+          <strong>30</strong> participants across <strong>11</strong> active weeks. Every visual cross-filters;
+          every excerpt is grounded in its coder rationale.
+        </p>
+      </div>
+    </div>
+    <div class="mast-actions">
+      <button class="btn" id="btnExportCsv" title="Export filtered rows to CSV">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
+      <button class="btn-icon" id="btnTheme" title="Toggle dark mode" aria-label="Toggle dark mode">
+        <svg id="icoSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg id="icoMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===================== KPI STRIP ===================== -->
+  <div class="kpi-wrap">
+    <div class="kpi-row" id="kpiRow">
+      <!-- populated by JS -->
+    </div>
+    <div class="kpi-row secondary" id="kpiRowMajor">
+      <!-- 6 Fink mini-tiles -->
+    </div>
+    <div class="top-minor-card">
+      <div class="top-minor-head">
+        <h4>Top 5 Minor Categories <span style="color:var(--ink-mute); font-weight:400; letter-spacing:0; text-transform:none; font-family:var(--font-display)">· by exemplar count (click to filter)</span></h4>
+      </div>
+      <div class="top-minor-list" id="topMinorList"></div>
+    </div>
+  </div>
+
+  <!-- ===================== FILTER BAR ===================== -->
+  <div class="filterbar" role="region" aria-label="Global filters">
+    <div class="filterbar-inner">
+      <span class="filterbar-label">Filter</span>
+
+      <div class="dd" data-filter="week">
+        <button class="dd-btn" aria-haspopup="listbox">Week <span class="chev"></span></button>
+        <div class="dd-panel" role="listbox"></div>
+      </div>
+      <div class="dd" data-filter="lcg">
+        <button class="dd-btn" aria-haspopup="listbox">LCG Prompt <span class="chev"></span></button>
+        <div class="dd-panel" role="listbox"></div>
+      </div>
+      <div class="dd" data-filter="major">
+        <button class="dd-btn" aria-haspopup="listbox">Major Category <span class="chev"></span></button>
+        <div class="dd-panel" role="listbox"></div>
+      </div>
+      <div class="dd" data-filter="minor">
+        <button class="dd-btn" aria-haspopup="listbox">Minor Category <span class="chev"></span></button>
+        <div class="dd-panel" role="listbox"></div>
+      </div>
+      <div class="dd" data-filter="verb">
+        <button class="dd-btn" aria-haspopup="listbox">Verb Indicator <span class="chev"></span></button>
+        <div class="dd-panel" role="listbox"></div>
+      </div>
+      <div class="dd" data-filter="dual">
+        <button class="dd-btn" aria-haspopup="listbox">Dual-Coded <span class="chev"></span></button>
+        <div class="dd-panel" role="listbox"></div>
+      </div>
+
+      <div class="chipbar" id="chipbar"></div>
+    </div>
+  </div>
+
+  <!-- ===================== INSIGHTS ===================== -->
+  <div class="insights" id="insights">
+    <div class="insights-head">Auto-Generated Insights · reflects active filters</div>
+    <div class="insights-grid" id="insightsGrid"></div>
+  </div>
+
+  <!-- ===================== SECTION A · DISTRIBUTION ===================== -->
+  <div class="section-head">
+    <span class="eyebrow">Section A</span>
+    <h2>Distribution — how the corpus divides across prompts &amp; categories</h2>
+    <span class="rule"></span>
+  </div>
+
+  <div class="grid grid-3">
+    <div class="card" data-chart="lcgDonut">
+      <div class="card-head">
+        <div class="card-title-wrap">
+          <h3 class="card-title">Exemplar share by LCG Prompt</h3>
+          <div class="card-cap">Donut — Learn · Change · Grow. Click to filter.</div>
+        </div>
+        <div class="card-actions"></div>
+      </div>
+      <div class="card-body h-md"><canvas id="cLcg"></canvas><div class="data-view" id="cLcg_dv"></div></div>
+    </div>
+
+    <div class="card" data-chart="majorBar">
+      <div class="card-head">
+        <div class="card-title-wrap">
+          <h3 class="card-title">Exemplars by Major Category (Fink)</h3>
+          <div class="card-cap">Sorted descending. Same colors are reused across every chart for consistency.</div>
+        </div>
+        <div class="card-actions"></div>
+      </div>
+      <div class="card-body h-md"><canvas id="cMajor"></canvas><div class="data-view" id="cMajor_dv"></div></div>
+    </div>
+
+    <div class="card" data-chart="treemap">
+      <div class="card-head">
+        <div class="card-title-wrap">
+          <h3 class="card-title">Major → Minor drill-down</h3>
+          <div class="card-cap">Treemap. Rectangle area = exemplar count; color = parent Major Category.</div>
+        </div>
+        <div class="card-actions"></div>
+      </div>
+      <div class="card-body h-md"><canvas id="cTree"></canvas><div class="data-view" id="cTree_dv"></div></div>
+    </div>
+  </div>
+
+  <!-- ===================== SECTION B · TRENDS ===================== -->
+  <div class="section-head">
+    <span class="eyebrow">Section B</span>
+    <h2>Trends over time — how coding evolved across the 12-week cohort</h2>
+    <span class="rule"></span>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card" data-chart="weekStack">
+      <div class="card-head">
+        <div class="card-title-wrap">
+          <h3 class="card-title">Weekly exemplar volume, stacked by LCG Prompt</h3>
+          <div class="card-cap">Stacked area — reveals when Learn, Change, and Grow reflections peaked. Week 8 has no exemplars.</div>
+        </div>
+        <div class="card-actions"></div>
+      </div>
+      <div class="card-body h-md"><canvas id="cWeekLcg"></canvas><div class="data-view" id="cWeekLcg_dv"></div></div>
+    </div>
+
+    <div class="card" data-chart="weekMajor">
+      <div class="card-head">
+        <div class="card-title-wrap">
+          <h3 class="card-title">Weekly exemplars by Major Category</h3>
+          <div class="card-cap">Multi-line — six Fink categories tracked week by week.</div>
+        </div>
+        <div class="card-actions"></div>
+      </div>
+      <div class="card-body h-md"><canvas id="cWeekMajor"></canvas><div class="data-view" id="cWeekMajor_dv"></div></div>
+    </div>
+
+    <div class="card span-2" data-chart="smallMult">
+      <div class="card-head">
+        <div class="card-title-wrap">
+          <h3 class="card-title">Small multiples — Major Category trajectory within each LCG Prompt</h3>
+          <div class="card-cap">Three panels (Learn · Change · Grow), six-series mini lines each. Compare trajectories side-by-side.</div>
+        </div>
+        <div class="card-actions"></div>
+      </div>
+      <div class="card-body h-md"><div class="small-mult" id="smallMult"></div></div>
+    </div>
+  </div>
+
+  <!-- ===================== SECTION C · CROSS-COMPARISONS ===================== -->
+  <div class="section-head">
+    <span class="eyebrow">Section C</span>
+    <h2>Cross-comparisons — where the frameworks intersect</h2>
+    <span class="rule"></span>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card" data-chart="heatLcgMajor">
+      <div class="card-head">
+        <div class="card-title-wrap">
+          <h3 class="card-title">LCG Prompt × Major Category</h3>
+          <div class="card-cap">Heatmap — exemplar counts. Click any cell to filter both dimensions at once.</div>
+        </div>
+        <div class="card-actions"></div>
+      </div>
+      <div class="card-body h-md"><div class="heatmap" id="heatLM"></div></div>
+    </div>
+
+    <div class="card" data-chart="minorGrouped">
+      <div class="card-head">
+        <div class="card-title-wrap">
+          <h3 class="card-title">Minor Category counts, grouped by LCG Prompt
+            <select id="selMinorParent" style="margin-left:8px; padding:4px 8px; border-radius:7px; border:1px solid var(--line); background:var(--surface-2); font-family:inherit; font-size:12px; color:var(--ink);">
+              <option value="__ALL__">All Major Categories</option>
+            </select>
+          </h3>
+          <div class="card-cap">Grouped bars — switch the parent Major Category to drill in. Empty series omitted.</div>
+        </div>
+        <div class="card-actions"></div>
+      </div>
+      <div class="card-body h-md"><canvas id="cMinorGrp"></canvas><div class="data-view" id="cMinorGrp_dv"></div></div>
+    </div>
+
+    <div class="card span-2" data-chart="heatWeekMajor">
+      <div class="card-head">
+        <div class="card-title-wrap">
+          <h3 class="card-title">Week × Major Category intensity</h3>
+          <div class="card-cap">Heatmap — darker = higher density. Reveals which Fink categories dominated each week.</div>
+        </div>
+        <div class="card-actions"></div>
+      </div>
+      <div class="card-body h-md"><div class="heatmap" id="heatWM"></div></div>
+    </div>
+  </div>
+
+  <!-- ===================== SECTION D · DEPTH ===================== -->
+  <div class="section-head">
+    <span class="eyebrow">Section D</span>
+    <h2>Depth — verbs, participants, and the evidence trail</h2>
+    <span class="rule"></span>
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card" data-chart="verbBubble">
+      <div class="card-head">
+        <div class="card-title-wrap">
+          <h3 class="card-title">Verb-indicator frequency</h3>
+          <div class="card-cap">Bubble size = occurrences; color = parent Major Category. Click a bubble to filter by that verb.</div>
+        </div>
+        <div class="card-actions"></div>
+      </div>
+      <div class="card-body h-lg"><canvas id="cVerb"></canvas><div class="data-view" id="cVerb_dv"></div></div>
+    </div>
+
+    <div class="card" data-chart="participant">
+      <div class="card-head">
+        <div class="card-title-wrap">
+          <h3 class="card-title">Exemplars per participant</h3>
+          <div class="card-cap">Sorted descending. Each bar segmented by LCG Prompt to show contribution mix.</div>
+        </div>
+        <div class="card-actions"></div>
+      </div>
+      <div class="card-body h-lg"><div class="participant-chart" id="ppChart"></div></div>
+    </div>
+  </div>
+
+  <!-- ===================== SECTION E · EVIDENCE ===================== -->
+  <div class="section-head">
+    <span class="eyebrow">Section E</span>
+    <h2>Evidence — verbatim reflections &amp; coder rationales</h2>
+    <span class="rule"></span>
+  </div>
+
+  <div class="card" style="padding: 20px 22px 22px;">
+    <div class="card-head" style="margin-bottom: 6px;">
+      <div class="card-title-wrap">
+        <h3 class="card-title">Exemplar evidence gallery</h3>
+        <div class="card-cap">Each card shows the original student reflection and the coder's rationale for the code assignment. Respects every active filter.</div>
+      </div>
+      <div class="ev-sort">
+        Sort
+        <select id="evSort">
+          <option value="id">Code ID</option>
+          <option value="week">Week ↑</option>
+          <option value="week-desc">Week ↓</option>
+          <option value="major">Major category</option>
+          <option value="participant">Participant</option>
+          <option value="length">Excerpt length ↓</option>
+        </select>
+      </div>
+    </div>
+    <div class="evidence-grid" id="evidenceGrid"></div>
+    <div class="ev-controls">
+      <span class="ev-info" id="evInfo"></span>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn" id="evLoadMore">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          Load more
+        </button>
+        <button class="btn" id="evShowAll">Show all</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== TABLE ===================== -->
+  <div class="table-card">
+    <div class="table-head">
+      <div class="left">
+        <h3>Exemplar registry</h3>
+        <span class="count" id="tblCount">0 rows</span>
+      </div>
+      <input type="search" class="table-search" id="tblSearch" placeholder="Search excerpts, rationales, verbs, IDs…" aria-label="Search exemplars">
+    </div>
+    <div style="overflow:auto;">
+      <table class="dtable" id="dtable">
+        <thead>
+          <tr>
+            <th data-col="id">Code</th>
+            <th data-col="p">Participant</th>
+            <th data-col="w" class="num-cell">Week</th>
+            <th data-col="l">LCG</th>
+            <th data-col="M">Major Category</th>
+            <th data-col="m">Minor Category</th>
+            <th data-col="v">Verbs</th>
+            <th data-col="x">Excerpt preview</th>
+          </tr>
+        </thead>
+        <tbody id="dtbody"></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <span id="pagerInfo"></span>
+      <div class="pager-btns" id="pagerBtns"></div>
+    </div>
+  </div>
+
+  <footer class="foot">
+    <span>Executive Dashboard · LCG × Fink's Taxonomy</span>
+    <span id="footTs"></span>
+  </footer>
+</div>
+
+<div class="floating-tt" id="tt"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================= DATA =============================
+const RAW = [{"id":"FK1-01","p":"1","w":1,"l":"Learn","M":"Foundational Knowledge","m":"1. Retrieval & Recognition","v":["Recall","Recognize"],"x":"The course this week provided insights into advancements of AI, specifically going into details about models like generative adversarial networks (GANs). The explanation of the relationship between the generator and the discriminator provided clarity to the process of AI's ability to create realistic data. I 'knew' the concept but this added to my understanding. I wasn't familiar with the formal term generative adversarial networks.","r":"Student recalls prior knowledge and recognizes new terminology (GANs), explicitly noting they knew the concept but not the formal term.","d":0,"dc":""},{"id":"FK1-02","p":"12","w":1,"l":"Learn","M":"Foundational Knowledge","m":"1. Retrieval & Recognition","v":["Recognize","Identify"],"x":"I also was not aware there were specific types of AI, specifically what we learned which is generative AI. I now understand that AI is a type of umbrella term that encompasses all different forms of AI. I never knew the basic definitions until now.","r":"Student identifies and recognizes categorical distinctions in AI types for the first time.","d":0,"dc":""},{"id":"FK1-03","p":"5","w":1,"l":"Learn","M":"Foundational Knowledge","m":"1. Retrieval & Recognition","v":["Recognize","Recall"],"x":"I also learned that I've somehow picked up more little tidbits about AI over the years than I gave myself credit for. I assumed my knowledge was very elementary, but after watching the LinkedIn Learning video and reading the Cherner and Foulger article, I was pleased to see that my foundational knowledge wasn't entirely abysmal.","r":"Student recognizes and recalls existing knowledge, retrieving prior learning they had not consciously catalogued.","d":0,"dc":""},{"id":"FK1-04","p":"11","w":1,"l":"Learn","M":"Foundational Knowledge","m":"1. Retrieval & Recognition","v":["Recognize","Identify"],"x":"I did not know what GANs were or how they operated, though I did understand that mechanism at the practical level from working with DALL-E.","r":"Student recognizes a gap between practical experience and formal knowledge, identifying the mechanism retrospectively.","d":0,"dc":""},{"id":"FK1-05","p":"3","w":1,"l":"Learn","M":"Foundational Knowledge","m":"1. Retrieval & Recognition","v":["Identify","Recognize"],"x":"Another interesting topic was the Generative Aversarial Networks (GAN) and how it works. I have seen the abbreviation GAN in so many applications, and now I know what it means.","r":"Student identifies a term they had previously encountered without understanding, now recognizing its meaning.","d":0,"dc":""},{"id":"FK1-06","p":"9","w":1,"l":"Learn","M":"Foundational Knowledge","m":"1. Retrieval & Recognition","v":["Identify","List"],"x":"I learned a great deal about the different types of AI this week, and three are of great interest to me. These are generative AI, reactive AI, and reinforcement learning AI.","r":"Student identifies and lists specific AI types retrieved from course content.","d":0,"dc":""},{"id":"FK1-07","p":"8","w":1,"l":"Learn","M":"Foundational Knowledge","m":"1. Retrieval & Recognition","v":["Recognize"],"x":"This week I learned that AI has been around much longer than I initially thought. When considering the Diffusion of Innovation, I would imagine that I am generally in the middle of adoption; I only really started hearing about AI in the last few years with the launch of ChatGPT.","r":"Student recognizes the historical timeline of AI, updating their stored understanding of when AI originated.","d":0,"dc":""},{"id":"FK1-08","p":"14","w":1,"l":"Learn","M":"Foundational Knowledge","m":"1. Retrieval & Recognition","v":["Recognize","Identify"],"x":"I went into this module with very little formal knowledge about AI and little experience with it. The LinkedIn Learning course gave me a basic understanding of AI and its possibilities. What stood out was the discussion on how Variational Autoencoders (VAE) can be used to detect anomalies or deviations from normal.","r":"Student identifies a specific AI architecture (VAE) and recognizes its application in anomaly detection.","d":0,"dc":""},{"id":"FK1-09","p":"K","w":6,"l":"Learn","M":"Foundational Knowledge","m":"1. Retrieval & Recognition","v":["Recall","Identify"],"x":"This week, I learned that WhatsApp launched an AI-powered message summarization feature that helps users quickly catch up on conversations, which is helpful as an active participant in several group chats. I also discovered that Google DeepMind released AlphaGenome, an AI tool designed to help scientists better understand genetic disorders.","r":"Student recalls and identifies specific new AI tools and their functions from their weekly exploration.","d":0,"dc":""},{"id":"FK1-10","p":"4","w":1,"l":"Learn","M":"Foundational Knowledge","m":"1. Retrieval & Recognition","v":["Recall","Identify"],"x":"This week, I learned about the basics of AI and generative AI. I liked how the video breaks down the different types of AI that are out there and how they can be used. Generative AI, which I had been introduced to at work but didn't use until recently, and reinforcement AI piques my interest.","r":"Student recalls and identifies AI categories, connecting new learning to prior workplace introduction.","d":0,"dc":""},{"id":"FK2-01","p":"12","w":1,"l":"Learn","M":"Foundational Knowledge","m":"2. Formal Declaration","v":["Define","State"],"x":"I now know that AI is capable of data analyzing and making predictions while generative AI can create new content such as images and text.","r":"Student provides formal definitions distinguishing AI from generative AI.","d":0,"dc":""},{"id":"FK2-02","p":"H","w":10,"l":"Learn","M":"Foundational Knowledge","m":"2. Formal Declaration","v":["Define","State"],"x":"What Co-pilot shared with me is that AI has two different types of intelligence: Static and Machine Learning. Static depends on code and programming and cannot 'think' beyond the scope of what it's been programmed to do. Machine Learning evolves by reading data and patterns.","r":"Student states formal definitions of two types of AI intelligence with precise distinctions.","d":0,"dc":""},{"id":"FK2-03","p":"J","w":4,"l":"Learn","M":"Foundational Knowledge","m":"2. Formal Declaration","v":["Define","State"],"x":"AI agents differ from Generative Pre-Trained (GPT) models in that they actually have some autonomous functions. I think of them more as problem solvers. A GPT will still take your input and provide you with one output. An AI Agent, in contrast, will keep working until it finds a solution.","r":"Student provides a definitional distinction between AI agents and GPT models with precise functional differences.","d":0,"dc":""},{"id":"FK2-04","p":"2","w":1,"l":"Learn","M":"Foundational Knowledge","m":"2. Formal Declaration","v":["State","Recount"],"x":"From the Linkedin Learning presenter, I learned that AI will not completely replace humans at work. This was reassuring to hear because I am frequently asked this question by customers who fear that software engineering will eventually become extinct. This is not true. In order for AI to keep evolving, humans have to maintain, debug, and redesign tools like chatbots.","r":"Student states a key principle about AI-human complementarity and recounts the rationale.","d":0,"dc":""},{"id":"FK2-05","p":"5","w":7,"l":"Learn","M":"Foundational Knowledge","m":"2. Formal Declaration","v":["Define"],"x":"This week, I tackled natural language generation (NLG), an exciting area of AI focused on enabling machines to produce human-like text. I learned about how NLG systems work, including the stages of content determination, text planning, and surface realization.","r":"Student defines NLG and states its technical stages as formal declarations.","d":0,"dc":""},{"id":"FK2-06","p":"N","w":10,"l":"Learn","M":"Foundational Knowledge","m":"2. Formal Declaration","v":["Define","State"],"x":"Agent Mode is an AI system tool that can carry out multi-step tasks, manage goals over time, and interact with systems in ways that mimic a human assistant.","r":"Student provides a clear, definitional statement of what Agent Mode is and its core functions.","d":0,"dc":""},{"id":"FK2-07","p":"1","w":2,"l":"Learn","M":"Foundational Knowledge","m":"2. Formal Declaration","v":["Define"],"x":"Multimodal models, capable of processing various data forms like text, audio, and imagery, intrigued me.","r":"Student states a concise formal definition of multimodal models.","d":0,"dc":""},{"id":"FK3-01","p":"3","w":6,"l":"Learn","M":"Foundational Knowledge","m":"3. Structural Detailing","v":["Describe","Narrate"],"x":"I first received permission from the Customer Experience Team and Market Insights to ensure the images can be utilized in the course. I uploaded the original product pictures and asked the AI program to create the specific images with the prompts. At first, it did not provide the outcomes I wanted or expected. After reviewing the previous prompts, I adjusted the words and was more precise about what exactly I wanted.","r":"Student narrates a step-by-step sequence of their AI image generation workflow, detailing the iterative process.","d":0,"dc":""},{"id":"FK3-02","p":"5","w":6,"l":"Learn","M":"Foundational Knowledge","m":"3. Structural Detailing","v":["Describe","Outline"],"x":"First, I uploaded the videos to YouTube to get transcriptions. Once I had the text, I used ChatGPT to create a structured outline for an eLearning course in Articulate Rise. Playing around with different prompts, I ended up with scripts for narration, learning objectives, section and module headings, and even a quiz with various question types.","r":"Student outlines a detailed multi-step workflow for converting video content to eLearning, describing each stage.","d":0,"dc":""},{"id":"FK3-03","p":"2","w":12,"l":"Learn","M":"Foundational Knowledge","m":"3. Structural Detailing","v":["Describe","Narrate"],"x":"A human employee at Katy's Dumplings said their waiter robot uses machine learning algorithms, sensors, and artificial intelligence (AI) to navigate around the restaurant. The robot has visual recognition technology so it can detect objects around it and track motion, so it can roll around tables, chairs, and other furniture without crashing into them.","r":"Student describes the features and technical components of a robotic system in sequential detail.","d":0,"dc":""},{"id":"FK3-04","p":"H","w":6,"l":"Learn","M":"Foundational Knowledge","m":"3. Structural Detailing","v":["Describe","Outline"],"x":"Zenarate AI Coach is an AI-powered simulation platform that helps learners practice real-world conversations, especially in high-pressure, customer-facing roles. It provides simulations that build confidence and proficiency before our agents start taking live calls.","r":"Student describes features and functional sequence of a specific AI training platform.","d":0,"dc":""},{"id":"FK3-05","p":"10","w":11,"l":"Learn","M":"Foundational Knowledge","m":"3. Structural Detailing","v":["Describe","Outline"],"x":"The technique involves setting variable within the prompt that can be modified in a more efficient manner. Using curly brackets, the main idea is defined (i.e., 'the Class') and attributes added at the end of the prompt.","r":"Student outlines a specific prompt engineering technique with structural detail about syntax and variable placement.","d":0,"dc":""},{"id":"FK3-06","p":"J","w":9,"l":"Learn","M":"Foundational Knowledge","m":"3. Structural Detailing","v":["Describe"],"x":"The importance of vectorizing data is that it can group topics together based on context and semantic meeting. To do this, I used the Notion API and pulled in all of our notes.","r":"Student describes the technical process and features of data vectorization in sequential steps.","d":0,"dc":""},{"id":"FK3-07","p":"8","w":2,"l":"Learn","M":"Foundational Knowledge","m":"3. Structural Detailing","v":["Describe","Narrate"],"x":"What has really stuck with me from the Ronnie Sheer ChatGPT LinkedIn Learning course is the details for the request matter. In my first professional role, I served as an Administrative Assistant for an academic department at a university. When people asked for my help with things, I was happy to do it, but I felt like I needed a bunch of details that they may have found obvious.","r":"Student narrates a parallel between their professional experience and AI prompt engineering, detailing the shared feature of precision in requests.","d":0,"dc":""},{"id":"FK3-08","p":"C","w":6,"l":"Learn","M":"Foundational Knowledge","m":"3. Structural Detailing","v":["Describe"],"x":"AI can simulate real-life behavior scenarios, which gives a visual for sometimes difficult concepts, it can give real-time feedback, and adapt content to each parent's learning pace. I was especially impressed by AI-powered video feedback platforms that analyze parent child interactions and flag areas for improvement.","r":"Student describes features and capabilities of AI-powered training tools in the ABA context with structural detail.","d":0,"dc":""},{"id":"FK4-01","p":"4","w":1,"l":"Learn","M":"Foundational Knowledge","m":"4. Synthesis & Interpretation","v":["Explain","Interpret"],"x":"I also learned how to take a different perspective on where humans and AI intertwine. I like how she suggests that, as humans, we should place ourselves at a much higher level in the technological hierarchy. There is a sense of fear of this new technology being used and humans dreading the taking over of AI. I liked how the change of perspective regarding AI as it compares to human beings, and if we understand that we are the developers and AI is considered the tool to enhance aspects of our world, we can reach a new potential.","r":"Student interprets the human-AI relationship through a new conceptual lens, synthesizing course content into their own understanding.","d":0,"dc":""},{"id":"FK4-02","p":"13","w":1,"l":"Learn","M":"Foundational Knowledge","m":"4. Synthesis & Interpretation","v":["Explain","Interpret"],"x":"Now, I understand that, yes, it can be abused for cheating, but it can also be an excellent tool for brainstorming, scaffolding, teaching, learning... all the -ings! This completely changes the way I believe AI may be used in academic and workplace environments because I learned this week that it is not a tool to replace your brain and your knowledge, but rather a tool to enhance your knowledge and expand your way of thinking.","r":"Student reinterprets AI from a unidimensional cheating tool to a multifaceted enhancement tool, translating learning into their own words.","d":0,"dc":""},{"id":"FK4-03","p":"3","w":2,"l":"Change","M":"Foundational Knowledge","m":"4. Synthesis & Interpretation","v":["Interpret","Explain"],"x":"My perspective changed when the course gave the example that AI would provide outcomes with 100% confidence, and I believe it said 90% percent accuracy. This statement reassured me of the importance of checking the outcomes or information that the AI tool provides.","r":"Student interprets a key statistical distinction about AI confidence vs. accuracy, explaining its practical implications.","d":0,"dc":""},{"id":"FK4-04","p":"F","w":5,"l":"Learn","M":"Foundational Knowledge","m":"4. Synthesis & Interpretation","v":["Explain","Interpret"],"x":"This week, I gained a deeper understanding of how large language models (LLMs) are utilized to support co-creation projects rather than merely automating tasks. I understand that these GenAI tools are well-suited for streamlining repetitive tasks. However, one must appreciate how quickly they have become an essential cognitive partner in brainstorming, drafting, and refining complex ideas. In reality, for those who learn to wield its advantages, every project henceforth is a group project with unlimited resources.","r":"Student synthesizes their understanding of LLMs, interpreting them as cognitive partners rather than automation tools \u2014 a higher-level reframing.","d":0,"dc":""},{"id":"FK4-05","p":"10","w":1,"l":"Learn","M":"Foundational Knowledge","m":"4. Synthesis & Interpretation","v":["Explain","Interpret"],"x":"An interesting question is what impact AI will have on organizational design and the relationships between the divisions, product lines, service lines, etc. While I had some understanding of AI, watching the LinkedIn course provided me a more structured view of the potential applications of AI.","r":"Student interprets AI's potential impact through an organizational design lens, synthesizing technical learning with professional expertise.","d":0,"dc":""},{"id":"FK4-06","p":"N","w":7,"l":"Learn","M":"Foundational Knowledge","m":"4. Synthesis & Interpretation","v":["Summarize","Interpret"],"x":"What I found especially meaningful was the emphasis on keeping a human-in-the-loop. The idea isn't to replace experts but to support them by removing the tedious parts of the job so they can focus on critical thinking and decision-making. That's a shift in mindset from using AI as a tool for automation to seeing it as a true assistant that works alongside us.","r":"Student summarizes research findings and interprets the conceptual shift from AI-as-automation to AI-as-assistant.","d":0,"dc":""},{"id":"FK4-07","p":"8","w":1,"l":"Change","M":"Foundational Knowledge","m":"4. Synthesis & Interpretation","v":["Interpret","Explain"],"x":"Contemplating AI's use in high-risk scenarios allowed me to backpedal and understand its use in much less risky scenarios.","r":"Student interprets AI applications by reasoning from high-stakes to low-stakes contexts, showing conceptual synthesis.","d":0,"dc":""},{"id":"FK4-08","p":"19","w":7,"l":"Change","M":"Foundational Knowledge","m":"4. Synthesis & Interpretation","v":["Interpret"],"x":"I'm beginning to conceptualize AI as a tool or object which is inherently neither good (+) nor bad (-). Perhaps I am waxing philosophic here but bear with me. To the extent there are optimistic or pessimistic positions regarding the future of AI integration, I think normative qualifications better describe the people rather than the tool itself.","r":"Student offers a philosophical interpretation reframing the AI debate from technology to human agency, showing deep synthesis.","d":0,"dc":""},{"id":"FK4-09","p":"M","w":9,"l":"Learn","M":"Foundational Knowledge","m":"4. Synthesis & Interpretation","v":["Interpret","Explain"],"x":"We also talked about how the web is shifting from destination to dialogue. With AI-powered personalization, websites are becoming more dynamic, responsive, and user-driven tailoring content in real time based on user behavior, intent, or inferred needs. What struck me was how much that framing applies to education.","r":"Student interprets a business concept (destination-to-dialogue) and synthesizes its application to education.","d":0,"dc":""},{"id":"FK4-10","p":"6","w":7,"l":"Change","M":"Foundational Knowledge","m":"4. Synthesis & Interpretation","v":["Interpret"],"x":"AI is a just a tool that is inherently neither good nor bad. It all comes down to how it is used. Its the difference in using a hammer to build shelves or to smash a window.","r":"Student interprets the moral neutrality of AI through a metaphor, demonstrating synthesis in their own words.","d":0,"dc":""},{"id":"AP1-01","p":"6","w":1,"l":"Learn","M":"Application","m":"1. Execution & Utilization","v":["Use","Employ","Operate"],"x":"I use OtterAI during and after meetings to summarize and provide action items (not only does UWF provide it to me for course work, my work recently got me access for those meetings as well), ChatGPT to fix spreadsheet formulas when I can't figure out why I'm getting an error or not getting the output I expect, and ChatPDF to scan articles for research when I want to see if it is going to be as helpful as the title makes me think, to name a few.","r":"Student describes active use of multiple AI tools across workplace and academic tasks.","d":0,"dc":""},{"id":"AP1-02","p":"11","w":2,"l":"Learn","M":"Application","m":"1. Execution & Utilization","v":["Use","Implement","Operate"],"x":"I went ahead and splurged on GPT Plus because I wanted to know what it could do differently with 4o and customizable GPTs. I worked with different prompting methods to get to a place where the GPT model writes emails in my voice, can recognize what I mean when I ask about 'my [insert person or pet here],' and can relate back to conversations I have had before to find relevant locations or information.","r":"Student implements a paid AI tool, operating it with advanced customization to achieve personalized functionality.","d":0,"dc":""},{"id":"AP1-03","p":"15","w":9,"l":"Learn","M":"Application","m":"1. Execution & Utilization","v":["Use","Implement","Execute"],"x":"This week I was able to use CoPilot and ChatGPT to help me build out a flow in PowerAutomate. I recently got a license through work. Not only are we in the process of building out a number of processes, we are also wanting to automate some of the more rote and repetitive tasks. To that end, I was able to create a flow that allows individuals to fill out a Microsoft Form and receive a completed CE certificate within a span of five minutes.","r":"Student executes a concrete automation workflow using AI tools, implementing a functional process.","d":0,"dc":""},{"id":"AP1-04","p":"3","w":9,"l":"Learn","M":"Application","m":"1. Execution & Utilization","v":["Use","Execute","Carry out"],"x":"I used Chat GPT to create more of an exciting and engaging script for the presenter and included some AI images of our products and design. I created all 3 presentation in about 6 hours with script.","r":"Student carries out a time-sensitive workplace task using AI, executing presentations under deadline pressure.","d":0,"dc":""},{"id":"AP1-05","p":"12","w":6,"l":"Learn","M":"Application","m":"1. Execution & Utilization","v":["Use","Employ"],"x":"I asked ChatGPT to summarize sections of the transcripts. This made it flow better and was much more organized. Not to mention it only took me about 1 hour versus a whole day.","r":"Student employs AI to execute a routine task (meeting minutes) with measurable efficiency gains.","d":0,"dc":""},{"id":"AP1-06","p":"14","w":10,"l":"Learn","M":"Application","m":"1. Execution & Utilization","v":["Use","Execute"],"x":"I used ChatGPT to generate a chart for a dental hygiene instructor to track the students' patient requirements. Students must treat a specified number of patients presenting with various oral conditions. ChatGPT organized the students by name, highlighting completed and outstanding requirements.","r":"Student executes a practical administrative task using AI, producing a functional tracking tool.","d":0,"dc":""},{"id":"AP1-07","p":"11","w":9,"l":"Learn","M":"Application","m":"1. Execution & Utilization","v":["Use","Implement"],"x":"With this in mind, I tried using ChatGPT to 'rewrite my email content for a sensitive audience using an optimistic tone' before sending it out. I re-read it and go 'oh! Yeah, that is how so-and-so writes their emails.'","r":"Student implements AI for interpersonal communication improvement, using it as a real-time tone adjustment tool.","d":1,"dc":"Human Dimension: 1. Introspective Inquiry"},{"id":"AP1-08","p":"5","w":5,"l":"Learn","M":"Application","m":"1. Execution & Utilization","v":["Use","Employ","Execute"],"x":"I used ChatGPT to draft professional competencies and related skills for our civil engineers. I'm still refining my prompt engineering, so I tried to be very specific. I defined what a 'communication' competency is, fed it the number of skills that should be associated with each one, requested the rationale for each skill, and asked for suggestions on the best learning methods.","r":"Student executes a complex workplace task using AI, employing specific prompt engineering strategies.","d":0,"dc":""},{"id":"AP1-09","p":"H","w":9,"l":"Learn","M":"Application","m":"1. Execution & Utilization","v":["Use","Operate"],"x":"I have been exploring ways that I can use CoPilot to query qualitative data. For example, I can share a somewhat organized Word document with 40 pages of transcript mixed with survey responses and query co-pilot in multiple ways about the data.","r":"Student operates AI for qualitative data analysis, using it as an analytical instrument in organizational research.","d":0,"dc":""},{"id":"AP1-10","p":"A","w":5,"l":"Learn","M":"Application","m":"1. Execution & Utilization","v":["Use","Employ"],"x":"I provided the job description, uploaded my resume, and asked to tailor my resume to the job description and to fit on one page. Copilot was able to do all this. The learn part came when I asked about the best Word template to convey my resume. It suggested one not part of Word's template and provided inaccurate steps.","r":"Student employs AI for a practical task and discovers boundary of its utility through direct use.","d":0,"dc":""},{"id":"AP2-01","p":"7","w":2,"l":"Learn","M":"Application","m":"2. Analysis & Resolution","v":["Investigate","Differentiate"],"x":"This week, I actively explored how to use prompts to get the most accurate output from AI. With my previous use of AI, I have noticed that I would repeatedly prompt with additional detail to get a text output closer to my desired outcome, and I think this is due in part to the niche field from which I seek to gather information. ChatGPT doesn't clearly understand the difference between organizational behavior management and organizational behavior.","r":"Student investigates prompt engineering and differentiates between domain-specific outputs to resolve accuracy issues.","d":0,"dc":""},{"id":"AP2-02","p":"9","w":6,"l":"Learn","M":"Application","m":"2. Analysis & Resolution","v":["Investigate","Differentiate"],"x":"I experimented with a number of different AI models this week and they all seem to have the same issues. I will use CanvaAI as an example. It operates in a similar manner to ChatGPT, you can even access it through your ChatGPT menu. The user puts their prompt into the model and it generates an infographic based upon the prompt provided.","r":"Student systematically investigates multiple AI models, differentiating their capabilities to solve multimedia creation challenges.","d":0,"dc":""},{"id":"AP2-03","p":"16","w":7,"l":"Learn","M":"Application","m":"2. Analysis & Resolution","v":["Determine","Investigate"],"x":"I decided to ask Chat GPT for some videos. I gave it a topic and told it I wanted YouTube videos and it returned five very believable titles and attributed them to reputable organizations such as AWS and Google Cloud. The problem was that none of them exist. I've searched for them on YouTube, in Google on a video search and in a general web search.","r":"Student investigates AI output and determines through cross-verification that all five references were hallucinations.","d":0,"dc":""},{"id":"AP2-04","p":"2","w":10,"l":"Learn","M":"Application","m":"2. Analysis & Resolution","v":["Determine","Investigate"],"x":"I just learned that ChatGPT is providing outdated information about my company, App Academy. Checking the accuracy of our information, it was not accurate when it came to pricing options for our classes and course information. My surprise is that ChatGPT missed the mark since we posted pricing updates to our website one month ago.","r":"Student determines through investigation that AI is providing outdated business information, analyzing the cause.","d":0,"dc":""},{"id":"AP2-05","p":"C","w":7,"l":"Learn","M":"Application","m":"2. Analysis & Resolution","v":["Investigate","Differentiate"],"x":"I learned that it really depends on the type of AI being used. Generative AI like ChatGPT can be a problem if it's used to write session notes or treatment plans. Non-generative AI, which looks at data but doesn't write anything, is seen in a more positive light.","r":"Student investigates and differentiates between generative and non-generative AI based on insurance compliance implications.","d":0,"dc":""},{"id":"AP2-06","p":"6","w":9,"l":"Learn","M":"Application","m":"2. Analysis & Resolution","v":["Solve","Determine"],"x":"I'm working on laying out an algebra curriculum for a client, and it has super specific guidelines from them on how it is laid out that are unusual. So I laid out my ideas, and fed it and the requirements into ChatGPT, and have been fighting to get it to give me what I need. At least I'm not worried about it replacing my math specialist friends anymore.","r":"Student attempts to solve a complex curriculum layout problem using AI and determines its limitations through iterative problem-solving.","d":0,"dc":""},{"id":"AP3-01","p":"15","w":3,"l":"Learn","M":"Application","m":"3. Strategic Oversight","v":["Organize","Direct"],"x":"I was able to ask around and find out who was on the committee and my Director helped me join. As the first female of the group and a long history of training and development, I was interested to find out what the communication and training had been up until that point.","r":"Student organizes their involvement in an AI committee and directs inquiry into organizational AI governance.","d":0,"dc":""},{"id":"AP3-02","p":"6","w":6,"l":"Learn","M":"Application","m":"3. Strategic Oversight","v":["Organize","Oversee"],"x":"I've been working more with automating the 'conversation' between my spreadsheets, Asana, and feedback from my client. Collecting their feedback in a Google form, it is then output automatically into a Sheet; Zapier then creates a task in Asana based on the new row in that sheet that I can mark with different options.","r":"Student oversees and organizes an automated multi-tool workflow, managing AI-integrated resources across platforms.","d":0,"dc":""},{"id":"AP3-03","p":"3","w":10,"l":"Learn","M":"Application","m":"3. Strategic Oversight","v":["Direct","Organize"],"x":"I showed and coached the salespeople on how to use both tools. I was sure to let them know that they must check their information for authenticity and they must use AI ethically.","r":"Student directs and organizes AI adoption for a sales team, overseeing quality standards.","d":1,"dc":"Caring: 4. Influence & Advocacy"},{"id":"AP4-01","p":"9","w":10,"l":"Change","M":"Application","m":"4. Critical Evaluation","v":["Critique"],"x":"AI tends to produce artifacts that follow a fairly set pattern, it tends to have lots of bullet points, and very condensed information. Attempting to incorporate portions of that assignment into my deliverable one has required me to make significant adjustments to the already adjusted portions of the assignment. This makes me feel that detecting assignments that have been created with the use of AI is possible.","r":"Student critically evaluates the quality and detectability of AI-generated content through direct comparison.","d":0,"dc":""},{"id":"AP4-02","p":"8","w":10,"l":"Change","M":"Application","m":"4. Critical Evaluation","v":["Critique"],"x":"I asked ChatGPT multiple times over the semester for help and kept finding myself getting feedback that I didn't find particularly useful. So, I ditched it and did it the old-fashioned way. I know this is really a prompt engineering issue (aka 'user error') but instead of trying to be a better prompt engineer, I'd rather just get it over with on my own.","r":"Student critiques AI's utility for their specific use case, evaluating its limitations against manual work.","d":0,"dc":""},{"id":"AP4-03","p":"17","w":6,"l":"Learn","M":"Application","m":"4. Critical Evaluation","v":["Critique"],"x":"I have found that in the absence of specific and current data, AI provides generalizations. These generalizations do not capture the unique or nuanced aspects of an entity like CNATT, reducing the specificity and usefulness of the information provided.","r":"Student critiques AI's output quality when applied to domain-specific organizational contexts.","d":0,"dc":""},{"id":"AP4-04","p":"N","w":6,"l":"Learn","M":"Application","m":"4. Critical Evaluation","v":["Critique"],"x":"Even when they receive clear, targeted corrections, they often repeat their original mistakes. So, unless the model is retrained or fundamentally redesigned to absorb feedback, it will keep echoing the same errors again and again.","r":"Student critiques a fundamental limitation of LLMs based on research, evaluating their inability to incorporate feedback.","d":0,"dc":""},{"id":"AP5-01","p":"11","w":7,"l":"Learn","M":"Application","m":"5. Creative Synthesis","v":["Design","Develop","Produce"],"x":"I created a custom GPT and fed it our program info. I taught it to use logic to route to the right answer. The new employee can independently ask the GPT questions if he has to answer the phone or chat now and we update if I somehow missed something. It's pretty great for fostering independence, as long as it is trained well.","r":"Student designs and develops a novel custom GPT for employee onboarding, producing an original training tool.","d":0,"dc":""},{"id":"AP5-02","p":"7","w":6,"l":"Learn","M":"Application","m":"5. Creative Synthesis","v":["Design","Develop","Construct"],"x":"This week I created my first custom GPT using ChatGPT, which involved uploading my draft of deliverable one, other dissertation-focused assignments we've done, and configuring the GPT to help me seek out additional peer-reviewed references relevant to the work.","r":"Student constructs an original custom GPT for dissertation research support, designing a novel academic tool.","d":0,"dc":""},{"id":"AP5-03","p":"11","w":10,"l":"Learn","M":"Application","m":"5. Creative Synthesis","v":["Design","Develop","Produce"],"x":"I created my own custom GPT, named 'Email Enhancer.' It has been a game-changer for me. Whenever I need to draft an email, I input the main points I want to convey into the prompt. The GPT then helps me structure my thoughts into a clear, concise, and professional message with a positive spin.","r":"Student designs and produces an original custom GPT tailored to their specific communication needs.","d":0,"dc":""},{"id":"AP5-04","p":"15","w":7,"l":"Learn","M":"Application","m":"5. Creative Synthesis","v":["Design","Develop","Construct"],"x":"With the help of Chat GPT, I learned how to use two different programs yesterday: Twinery and Articulate's Storyline. I used both to make interactive activities for my pages. Twinery let me make a 'choose your own adventure' module.","r":"Student constructs original interactive learning materials using AI as a design partner, building something entirely new.","d":0,"dc":""},{"id":"AP5-05","p":"4","w":12,"l":"Learn","M":"Application","m":"5. Creative Synthesis","v":["Design","Produce","Develop"],"x":"By leveraging Synthesia, we created lifelike video training modules without the logistical constraints of traditional filming. These virtual avatars delivered precise and consistent training content, ensuring all team members received the same high-quality information tailored to various scenarios.","r":"Student produces original AI-generated video training content, designing a novel approach to behavior team training.","d":0,"dc":""},{"id":"AP5-06","p":"16","w":10,"l":"Learn","M":"Application","m":"5. Creative Synthesis","v":["Design","Develop"],"x":"One faculty member uses an AI imposter in the course. She creates a Canvas account and has the AI post to all of the discussion boards. Student then spend the entire semester responding to prompts and trying to determine who in the course is the AI. At the end there is a reveal of who the imposter really was.","r":"Student describes a creative AI course design (AI imposter) that represents novel pedagogical synthesis.","d":0,"dc":""},{"id":"IN1-01","p":"10","w":1,"l":"Learn","M":"Integration","m":"1. Identifying Relationships","v":["Relate","Connect"],"x":"For instance, the ideas of automation is something of which I am well aware. We have been creating macros in spreadsheets for years to automate repetitive actions. Traditionally, this has been especially true in business.","r":"Student connects AI automation to prior experience with spreadsheet macros, identifying shared context between old and new technology.","d":0,"dc":""},{"id":"IN1-02","p":"8","w":2,"l":"Learn","M":"Integration","m":"1. Identifying Relationships","v":["Relate","Connect"],"x":"My thoughts this week about AI are about how similar ChatGPT is to being married. I will say so few words to my husband, and when he comes back with something that doesn't match the context I was thinking about, I am stunned. No wonder I feel like ChatGPT isn't helpful \u2013 I'm not using it well enough!","r":"Student connects AI prompt engineering to personal communication dynamics, relating two disparate domains.","d":0,"dc":""},{"id":"IN1-03","p":"5","w":2,"l":"Learn","M":"Integration","m":"1. Identifying Relationships","v":["Relate","Connect"],"x":"I have been stuck in the mindset of old-school search methods - If you give too much information, it backfires, and you get fewer results! Clearly, this is not the case with AI; you just have to be strategic about how much detail to provide.","r":"Student links old search paradigms to new AI prompting paradigms, identifying the relationship and its reversal.","d":0,"dc":""},{"id":"IN1-04","p":"14","w":2,"l":"Learn","M":"Integration","m":"1. Identifying Relationships","v":["Connect","Associate"],"x":"The part of the course on customizing personas made me realize how a recent phishing incident at my workplace happened. Clients at the law firm were getting voicemails from what sounded like one of our attorneys requesting personal information. The IT guys informed us that the scammers used AI to manipulate our attorney's voice.","r":"Student connects AI persona customization learning to a real-world security incident, associating theoretical knowledge with lived experience.","d":0,"dc":""},{"id":"IN1-05","p":"D","w":3,"l":"Learn","M":"Integration","m":"1. Identifying Relationships","v":["Relate","Connect"],"x":"I ran across a TED Talk by Sal Khan, the founder of Khan Academy, where he spoke of how Khan Academy-specific AI is used to essentially tutor students to comprehension. I find this very interesting and a valuable tool - particularly since it speaks directly to the concern of just 'getting the answer.' It showed me that GenAI can be coded to NOT give the answer, but to help the student arrive to the answer themselves.","r":"Student connects personalized learning project to Khan Academy's AI tutoring approach, relating their project goals to an existing model.","d":0,"dc":""},{"id":"IN1-06","p":"K","w":6,"l":"Change","M":"Integration","m":"1. Identifying Relationships","v":["Connect","Associate"],"x":"Similarly, discovering DeepMind's AlphaGenome and reflecting on my robotic-assisted surgery helped me realize how AI transforms healthcare, not as a distant concept, but as a vital part of real patient experiences.","r":"Student connects personal medical experience to AI in healthcare, associating personal and professional domains.","d":0,"dc":""},{"id":"IN1-07","p":"8","w":6,"l":"Learn","M":"Integration","m":"1. Identifying Relationships","v":["Connect","Relate"],"x":"I found it really interesting that they've put together segments on using AI as a tutor or Supplemental Instruction (SI) leader already. It's pretty basic but encourages student employees to first determine if the faculty allows the use of AI for their class via the syllabus and then model how to use AI in a productive way.","r":"Student connects workplace training content to academic AI policy, relating institutional approaches.","d":0,"dc":""},{"id":"IN2-01","p":"9","w":1,"l":"Change","M":"Integration","m":"2. Comparative Distinction","v":["Differentiate","Distinguish"],"x":"Reactive AI seems like it will have limited uses in academic settings but will likely have numerous uses in workplace settings such as factories, warehouses and more. While reinforcement learning AI might have applications in certain educational apps and again factories, warehouses, etc. The type of AI most likely to have a significant impact on educational and workplace settings is generative AI.","r":"Student distinguishes between three AI types by comparing their suitability across academic vs. workplace contexts.","d":0,"dc":""},{"id":"IN2-02","p":"E","w":7,"l":"Learn","M":"Integration","m":"2. Comparative Distinction","v":["Contrast","Differentiate"],"x":"Open AI tools can offer greater transparency and flexibility, allowing for easier tailoring to specific tasks and integration into existing systems. Closed AI tools are typically proprietary and more polished, but offer less insight into how decisions are made and are less adaptable.","r":"Student contrasts open vs. closed AI systems, establishing clear boundaries between the two approaches.","d":0,"dc":""},{"id":"IN2-03","p":"9","w":7,"l":"Learn","M":"Integration","m":"2. Comparative Distinction","v":["Differentiate","Contrast"],"x":"Mistakes in multimedia results are also much more difficult to edit than those in text-based results, which means these mistakes are harder to correct, whereas with a text-based artifact it is relatively simple to make any needed modifications.","r":"Student contrasts text-based vs. multimedia AI outputs, differentiating the effort required for error correction.","d":0,"dc":""},{"id":"IN2-04","p":"11","w":2,"l":"Learn","M":"Integration","m":"2. Comparative Distinction","v":["Contrast","Distinguish"],"x":"I also started using different AI models, such as Meta's AI in Messenger and Snapchat AI. Meta's AI gave me gobs of incorrect information. It helped me find a certain singer's name based on my query but then told me all sorts of incorrect info about who they were married to and where they lived.","r":"Student distinguishes between AI models by contrasting quality of outputs across platforms.","d":0,"dc":""},{"id":"IN3-01","p":"7","w":11,"l":"Learn","M":"Integration","m":"3. Structural Synthesis","v":["Assemble","Compile"],"x":"This project had [Participant 11] and I dive deep into using AI to create comprehensive lessons on identifying and mitigating AI hallucinations. I learned how to effectively harness AI tools to generate unique educational content, design interactive choose-your-own-adventure scenarios, integrate activities that would engage learners while getting them to use the skills taught, and walk learners through developing structured plans.","r":"Student assembles multiple AI-generated components (content, scenarios, activities, plans) into a cohesive educational module.","d":0,"dc":""},{"id":"IN3-02","p":"6","w":12,"l":"Learn","M":"Integration","m":"3. Structural Synthesis","v":["Compile","Assemble"],"x":"I had a lovely conversation with ChatGPT where 'we' went through my paper and the rubric section by section and evaluated it. I got it to ask me some questions about things it thought I might be missing or need to elaborate on.","r":"Student assembles AI feedback with rubric criteria to compile a comprehensive review of their deliverable.","d":0,"dc":""},{"id":"IN3-03","p":"13","w":7,"l":"Learn","M":"Integration","m":"3. Structural Synthesis","v":["Compile","Assemble"],"x":"I used ChatGPT to source articles, links, and research related to 2023 and 2024 industry data, along with tips from my supervisor and a Pluralsight vendor, to create a framework containing ROI data for my final presentation.","r":"Student compiles AI-sourced research with supervisor input and vendor data to assemble a cohesive ROI framework.","d":0,"dc":""},{"id":"IN4-01","p":"F","w":5,"l":"Change","M":"Integration","m":"4. Seamless Fusion","v":["Integrate","Blend"],"x":"Rather than replacing human input, I now view AI as an orchestra of instruments with the user guiding its creations like a maestro.","r":"Student merges AI and human agency into a single unified metaphor, blending the concepts into a new perspective.","d":0,"dc":""},{"id":"IN4-02","p":"7","w":10,"l":"Grow","M":"Integration","m":"4. Seamless Fusion","v":["Integrate","Combine"],"x":"I plan to continue to use AI as a collaborative tool, but not as the 'end-all-be-all', allowing it to handle certain drafts and routine tasks so I can focus on critical analysis and creative/strategic thinking.","r":"Student integrates AI into workflow as a merged collaborative partner, combining AI capabilities with human strategic thinking.","d":0,"dc":""},{"id":"IN4-03","p":"3","w":12,"l":"Grow","M":"Integration","m":"4. Seamless Fusion","v":["Integrate","Blend"],"x":"I want to continue to learn and be efficient in using prompt engineering to create faster outcomes. Plus, I want to build my Python & HTML coding abilities using AI to create unique codes for learning interactions.","r":"Student blends AI prompt engineering with coding skills into an integrated future skillset.","d":0,"dc":""},{"id":"IN4-04","p":"15","w":7,"l":"Learn","M":"Integration","m":"4. Seamless Fusion","v":["Integrate","Blend"],"x":"It was just enough from Chat to get my motor going and then I could take it from there. Like [Participant 6] and [Participant 19] said, it's all in how you use it. But the potential to get a boost in skills and shave time off of certain activities makes me feel that generative AI has absolutely earned a seat at the table.","r":"Student describes a seamless blend of AI assistance and human execution, merging them into a unified workflow.","d":0,"dc":""},{"id":"HD1-01","p":"13","w":5,"l":"Learn","M":"Human Dimension","m":"1. Introspective Inquiry","v":["Reflect"],"x":"This week I learned that I'm not totally comfortable with the scope and depth of using AI academically yet. I used ChatGPT to help [Participant 17] and I develop lesson plans and fine tune them further, it felt a little dystopian. I've spent hours upon hours on assignments and developing ideas, and this site can just spit out great ideas to me in seconds. I am working on shaking the feeling of cheating.","r":"Student reflects deeply on internal discomfort with AI, examining their own beliefs about academic effort and authenticity.","d":0,"dc":""},{"id":"HD1-02","p":"8","w":12,"l":"Change","M":"Human Dimension","m":"1. Introspective Inquiry","v":["Reflect","Consider"],"x":"I recognize that many faculty members are more encouraged by progress than perfection. So, while I also just read this article on the new AI Friend wearable that is coming out, I think I am beginning to recognize that, while I am not an early adopter, technology has its role and can make things easier in many ways, but I don't want to become overly reliant on it.","r":"Student reflects on their own position within the technology adoption spectrum, considering their personal boundaries.","d":0,"dc":""},{"id":"HD1-03","p":"F","w":6,"l":"Learn","M":"Human Dimension","m":"1. Introspective Inquiry","v":["Reflect","Consider"],"x":"This week, I reflected on my positionality of AI integration in learning and teaching. I have varying levels of biases and beliefs. I acknowledge those biases; however, some of these beliefs feel so deeply embedded into my mindset. I feel that the hurdles with AI aren't always technical, but human.","r":"Student engages in deep introspective reflection on their own biases and positionality regarding AI.","d":0,"dc":""},{"id":"HD1-04","p":"14","w":9,"l":"Change","M":"Human Dimension","m":"1. Introspective Inquiry","v":["Reflect"],"x":"I am genuinely surprised by how my attitude toward AI in the academic setting has changed. Initially, I approached AI tools like ChatGPT with skepticism, uncertain of their value and reliability in the academic environment. However, as I used AI to help with developing my intervention implementation plan, my outlook shifted.","r":"Student reflects on their own attitudinal transformation toward AI over the semester.","d":0,"dc":""},{"id":"HD1-05","p":"9","w":2,"l":"Learn","M":"Human Dimension","m":"1. Introspective Inquiry","v":["Reflect"],"x":"AI is absolutely a threat to academic integrity, and I felt very awkward utilizing it for the assignment.","r":"Student reflects honestly on their emotional discomfort using AI for academic work.","d":0,"dc":""},{"id":"HD1-06","p":"A","w":7,"l":"Grow","M":"Human Dimension","m":"1. Introspective Inquiry","v":["Reflect","Consider"],"x":"I have been using AI a lot as my assistant for fine-tuning my resume and cover letters for specific job descriptions. While I know not everything it generates is accurate, I have become complacent in accepting the results. I need not lose sight of my responsibility to remain an active participant.","r":"Student reflects on their own growing complacency with AI and considers the need for continued vigilance.","d":0,"dc":""},{"id":"HD1-07","p":"D","w":5,"l":"Learn","M":"Human Dimension","m":"1. Introspective Inquiry","v":["Reflect"],"x":"To be blunt about it, I've caved in and used GenAI fairly extensively this week to help me manage my time and academic workload. I am definitely coming around to its usefulness in saving time on creating templates and protocols.","r":"Student reflects on their shifting relationship with AI, acknowledging personal capitulation and growing acceptance.","d":0,"dc":""},{"id":"HD1-08","p":"H","w":9,"l":"Change","M":"Human Dimension","m":"1. Introspective Inquiry","v":["Reflect"],"x":"When I first heard about Co-Pilot from my peers, I had this sort of self-righteous attitude that I didn't need AI to help me analyze, write, and develop content. Part of this came from experience in that I am a very experienced analyst and have always produced very detailed work.","r":"Student reflects on their own initial resistance rooted in professional identity and self-concept.","d":0,"dc":""},{"id":"HD1-09","p":"13","w":12,"l":"Change","M":"Human Dimension","m":"1. Introspective Inquiry","v":["Reflect"],"x":"At the start of this semester, my opinion of AI was quite different. I was hesitant and somewhat uncomfortable with AI technology, primarily due to my limited knowledge about it. However, through hands-on experience and consistent use, my perspective has significantly evolved. I now hold a deep respect for AI and its capabilities.","r":"Student reflects on the arc of their personal transformation regarding AI across the entire semester.","d":0,"dc":""},{"id":"HD1-10","p":"17","w":11,"l":"Learn","M":"Human Dimension","m":"1. Introspective Inquiry","v":["Reflect","Consider"],"x":"This week, I decided to unplug from AI for a bit. No AI reminders, no auto-suggestions, and no smart replies. It initially felt weird, but it quickly became a refreshing change.","r":"Student reflects on their relationship with AI through deliberate disconnection, examining the impact on cognition and creativity.","d":0,"dc":""},{"id":"HD2-01","p":"13","w":10,"l":"Learn","M":"Human Dimension","m":"2. Critical Self-Appraisal","v":["Evaluate"],"x":"I recognize that I am significantly less stressed this semester and wonder if the mental load of scaffolding and outlining being relieved by generative AI is the main reason for that. Despite being in the throws of learning a new company and fighting for my spot on the team, I feel like I've been able to manage my time well despite all the 'life' that's happening right now.","r":"Student evaluates their own growth by assessing AI's impact on their stress and time management.","d":0,"dc":""},{"id":"HD2-02","p":"4","w":11,"l":"Change","M":"Human Dimension","m":"2. Critical Self-Appraisal","v":["Evaluate","Appraise"],"x":"I think AI has surpassed what I originally envisioned generative AI to be. I have become more open to using this technology at work and no longer feel intimidated by it.","r":"Student evaluates their own growth from intimidation to openness, appraising their personal development.","d":0,"dc":""},{"id":"HD2-03","p":"10","w":12,"l":"Learn","M":"Human Dimension","m":"2. Critical Self-Appraisal","v":["Evaluate"],"x":"Now, I listen to my nephew and I find myself feeling as if I was born in the same generation as my parents. Thinking about this techie stuff 'kids these days' are spewing from their voice holes causes me to pause and think about the good ole days.","r":"Student evaluates their own generational positioning relative to technology, appraising how their identity intersects with AI adoption.","d":0,"dc":""},{"id":"HD2-04","p":"15","w":12,"l":"Learn","M":"Human Dimension","m":"2. Critical Self-Appraisal","v":["Evaluate","Appraise"],"x":"Even though I came into this semester as an AI enthusiast, I still learned so much and worked on pushing and challenging myself with AI. Instead of using it to coast, I was able to use it to continue learning and stretching my technology skills. AI is the perfect foil for someone like me who is always trying to dabble in things they are necessarily rated for.","r":"Student evaluates their own learning trajectory, appraising how they pushed beyond their comfort zone with AI.","d":0,"dc":""},{"id":"HD3-01","p":"11","w":9,"l":"Change","M":"Human Dimension","m":"3. Empathetic Connection","v":["Empathize","Connect"],"x":"This experience made me wonder if AI could be utilized as a customer service training tool. It could offer a more genuine-sounding alternative to scripts while maintaining the desired tone for a company's brand. I think it might be interesting for those on the autism spectrum or those training to work with different cultures.","r":"Student empathizes with others who struggle with communication, connecting AI as a bridge for neurodivergent individuals and cross-cultural communication.","d":0,"dc":""},{"id":"HD3-02","p":"4","w":6,"l":"Learn","M":"Human Dimension","m":"3. Empathetic Connection","v":["Empathize","Listen"],"x":"The article focused on surveying teens and young adults on the use of AI, and the results were different from what I would have expected, as I would have thought that the younger generations would have embraced and run with this new technology. They also worry about plagiarism, privacy, and AI taking over the world.","r":"Student connects empathetically with young people's AI concerns, listening to their perspective and revising assumptions.","d":0,"dc":""},{"id":"HD3-03","p":"11","w":11,"l":"Learn","M":"Human Dimension","m":"3. Empathetic Connection","v":["Connect","Empathize"],"x":"It made me think about the widening gap between people who are technologically up-to-date and those who are not. This gap could result in new opportunities for scammers.","r":"Student empathizes with those left behind by the digital divide, connecting AI literacy to vulnerability.","d":0,"dc":""},{"id":"HD3-04","p":"B","w":6,"l":"Learn","M":"Human Dimension","m":"3. Empathetic Connection","v":["Connect","Empathize"],"x":"I have never viewed AI as a resource to be used as a tool for equity in education. The article suggests giving low-income students access to AI tools. The author suggests that this has the potential to improve students' academic performance through offering personalized feedback, tutoring, and help with research and writing.","r":"Student connects empathetically to equity concerns, seeing AI through the lens of underserved student populations.","d":0,"dc":""},{"id":"HD3-05","p":"K","w":10,"l":"Learn","M":"Human Dimension","m":"3. Empathetic Connection","v":["Empathize","Connect"],"x":"This week, I learned that AWS Language Services does not support Haitian Creole, despite being spoken by over 10 million people. This discovery highlighted a significant gap in AI language accessibility and how underrepresented communities can be excluded from technological advancements.","r":"Student empathizes with excluded language communities, connecting AI limitations to social justice.","d":0,"dc":""},{"id":"HD4-01","p":"13","w":9,"l":"Learn","M":"Human Dimension","m":"4. Collaborative Interaction","v":["Share","Support","Engage"],"x":"ChatGPT was prompted to produce industry and academic presentations related to Excel scrubbing and organization and she quickly found 5-7 quality presentations she was able to cite and mimic their slide styles. She was super impressed by ChatGPT and will be using it in the future for brainstorming. We also talked about academic integrity and how professors have tools for skimming Canvas submissions/papers for AI.","r":"Student actively shares AI knowledge with a colleague, supports their learning, and engages in ethical discussion.","d":0,"dc":""},{"id":"HD4-02","p":"7","w":4,"l":"Learn","M":"Human Dimension","m":"4. Collaborative Interaction","v":["Collaborate","Engage"],"x":"This week, [Participant 11] and I began investigating the different types of hallucinations in AI and different strategies to mitigate them, along with exploring strategies for teaching the information in more interactive ways.","r":"Student engages in collaborative investigation with a peer, working together on AI content.","d":0,"dc":""},{"id":"HD4-03","p":"13","w":4,"l":"Learn","M":"Human Dimension","m":"4. Collaborative Interaction","v":["Collaborate","Engage"],"x":"This week [Participant 17] and I explored AI in the field of differentiated instruction (DI). The purpose of this field is to be inclusive of all students and meet them where they're at in terms of their educational needs.","r":"Student collaborates with a peer to explore AI applications in inclusive education.","d":0,"dc":""},{"id":"CA1-01","p":"14","w":6,"l":"Change","M":"Caring","m":"1. Valuing & Esteem","v":["Appreciate","Value"],"x":"I have been blown away by the quality and relevance of the information ChatGPT provides! I still get twinges of guilt when using it, but I am trying to keep an open mind to using it as a teaching and learning tool. It is important to note that despite the quality of the AI-generated content, I still review and verify the information to ensure its accuracy and relevance to my needs. AI does not replace my knowledge and expertise. It is a tool to help me with brainstorming.","r":"Student develops appreciation for AI's value while maintaining respect for the boundaries of its role.","d":0,"dc":""},{"id":"CA1-02","p":"3","w":12,"l":"Change","M":"Caring","m":"1. Valuing & Esteem","v":["Appreciate","Value"],"x":"My prompt engineering skills have improved since the first day of this semester, and they have helped me complete multiple projects for my organization. My organization has looked into incorporating more AI into L&D and providing more opportunities for employees to enhance their skills.","r":"Student values their AI skill growth and appreciates AI's organizational impact.","d":0,"dc":""},{"id":"CA1-03","p":"5","w":6,"l":"Change","M":"Caring","m":"1. Valuing & Esteem","v":["Appreciate","Value"],"x":"I can't even fathom how tedious and time-consuming this process would have been without AI. It was amazing to see how quickly I could turn unstructured video content into a well-organized eLearning course. This has definitely changed how I'll approach similar projects at work in the future.","r":"Student expresses genuine appreciation for AI's value in transforming their workflow.","d":0,"dc":""},{"id":"CA2-01","p":"F","w":4,"l":"Learn","M":"Caring","m":"2. Internal Prioritization","v":["Prioritize","Align"],"x":"This week, I believe I may have identified my Problem of Practice. As much as I do not want to fall into the trend of AI academia, unfortunately, this is the buzz in corporate America: How can we maximize shareholder profits with AI? Therefore, companies want to know who, what, where, why, when, and how much. There is a gust of AI motivation in many companies, and I plan to let them fill my sails and actually start writing our coursework on something truly tangible.","r":"Student aligns their academic research direction with the AI momentum in their professional field, prioritizing relevance.","d":0,"dc":""},{"id":"CA2-02","p":"13","w":5,"l":"Learn","M":"Caring","m":"2. Internal Prioritization","v":["Prioritize","Align"],"x":"This problem is all about reframing my mindset! I have to remind myself that it makes the brainstorming easy so I can jump into the work quicker.","r":"Student prioritizes a mental shift to align their values with AI as a legitimate tool, actively working to overcome resistance.","d":0,"dc":""},{"id":"CA3-01","p":"3","w":11,"l":"Grow","M":"Caring","m":"3. Dedication & Commitment","v":["Commit","Dedicate"],"x":"Using AI has increased my knowledge and ability to design and program much faster and include elements that I would not have incorporated in the projects due to time. My perspective of AI throughout the months has increased my optimism of using it in the workplace. I will continue to utilize AI and learn more about coding and prompt engineering to become more efficient in getting the best outcomes to use for my designs and projects.","r":"Student commits to continued long-term AI skill development, dedicating themselves to mastery.","d":0,"dc":""},{"id":"CA3-02","p":"12","w":12,"l":"Grow","M":"Caring","m":"3. Dedication & Commitment","v":["Commit","Dedicate"],"x":"I plan to be a part of our division level AI committee moving forward and helping my colleagues learn about AI. Overall moving forward it is important we accept AI and start teaching our students how to use it so that they will be more successful in the future in their own careers.","r":"Student commits to institutional AI leadership by dedicating themselves to committee work and peer education.","d":1,"dc":"Caring: 4. Influence & Advocacy"},{"id":"CA3-03","p":"14","w":11,"l":"Grow","M":"Caring","m":"3. Dedication & Commitment","v":["Commit"],"x":"Now that I am more open-minded to using ChatGPT as a tool for personal and work-related tasks, I plan to keep exploring its capabilities. As a dental hygiene instructor, I would like to look more into how chatbots like ChatGPT can be used to help students study.","r":"Student commits to ongoing AI exploration within their specific professional domain.","d":0,"dc":""},{"id":"CA3-04","p":"C","w":9,"l":"Grow","M":"Caring","m":"3. Dedication & Commitment","v":["Commit","Dedicate"],"x":"Going forward, I want to help bring AI training tools to my workplace's RBT training program. In the next several months, I plan to research different virtual training options and present my findings to our training supervisor. My long-term goal is to work with technology companies to create practice scenarios.","r":"Student pledges both short- and long-term commitment to bringing AI into their professional practice.","d":0,"dc":""},{"id":"CA4-01","p":"1","w":1,"l":"Grow","M":"Caring","m":"4. Influence & Advocacy","v":["Advocate","Promote"],"x":"I will continue to organize and participate in professional development sessions to share my knowledge with teachers in my district. I will continue to share practical ways to integrate AI into instructional practices in order to differentiate content and provide individualized instructional support for students.","r":"Student actively advocates for AI integration through organized PD sessions, promoting AI to peers.","d":0,"dc":""},{"id":"CA4-02","p":"11","w":1,"l":"Grow","M":"Caring","m":"4. Influence & Advocacy","v":["Advocate","Promote","Inspire"],"x":"I don't think the answer is to remove access. Rather, as with any technology, we have to show how it can be used effectively. I am more motivated now to use AI in my classes. I want to provide instruction and guidance on how to do so because I can see the lack of understanding in course assignments. I now feel that I have a baseline to instruct users on how to use it while considering ethical and practical limitations.","r":"Student advocates for AI education over prohibition, promoting ethical use and inspiring others to adopt AI thoughtfully.","d":0,"dc":""},{"id":"CA4-03","p":"A","w":6,"l":"Change","M":"Caring","m":"4. Influence & Advocacy","v":["Encourage","Promote"],"x":"I will be more of a champion for AI as a support tool that my friends can use daily. I have a very pessimistic group of friends (think Skynet) that I am channeling for the depolarizer. Once they start trying things out, they will realize it is not here to take over our existence.","r":"Student actively promotes AI to their social circle, encouraging skeptical friends to try AI tools.","d":0,"dc":""},{"id":"CA4-04","p":"F","w":5,"l":"Grow","M":"Caring","m":"4. Influence & Advocacy","v":["Advocate","Promote"],"x":"Moving forward, when developing any AI-related training, I will incorporate an AI literacy section. My goal is to empower users to develop the skills necessary for critical and ethical engagement with AI, while preserving their personal and professional integrity.","r":"Student advocates for AI literacy as a core component of training, promoting responsible use.","d":0,"dc":""},{"id":"CA4-05","p":"12","w":11,"l":"Change","M":"Caring","m":"4. Influence & Advocacy","v":["Advocate","Encourage"],"x":"Another thing I have learned about AI is how to be more accepting of AI and incorporating it with my own students instead of avoiding it. AI is not going away and just as I heard in a conference 'AI will only replace the technologist who chooses not to accept it'.","r":"Student shifts from avoidance to advocacy, encouraging AI integration in their classroom.","d":0,"dc":""},{"id":"LH1-01","p":"7","w":1,"l":"Grow","M":"Learning How To Learn","m":"1. Active Inquiry & Discovery","v":["Explore"],"x":"I am frustrated, but I'm hoping this class will help me gain additional perspective and strategies for creating assignments that get at the 'essence of the human experience', as our LinkedIn course instructor would say. If the tasks can truly be automated, then those assignments are likely to not provide value to students. I'm really looking forward to learning more!","r":"Student expresses drive to explore new approaches to AI-proof pedagogy, motivated by intellectual curiosity.","d":0,"dc":""},{"id":"LH1-02","p":"12","w":7,"l":"Learn","M":"Learning How To Learn","m":"1. Active Inquiry & Discovery","v":["Research","Explore"],"x":"I learn best by being hands-on, so I am researching other applications to try. I came across the above article about other apps out there. A lot of them are very similar to ChatGPT, but many of them seem pretty interesting. Some of them are used for generating images and some alter audio.","r":"Student actively researches and explores new AI tools beyond course requirements, driven by curiosity.","d":0,"dc":""},{"id":"LH1-03","p":"J","w":5,"l":"Learn","M":"Learning How To Learn","m":"1. Active Inquiry & Discovery","v":["Research","Investigate","Probe"],"x":"I was reading about a new experiment on LLM memorization. Essentially, the researchers tokenized phrases from Harry Potter books, split them in half, and then tried to get the LLM to reproduce the rest of the phrases, sometimes prompting repeatedly. They said they were able to reproduce 91% of The Sorcerer's Stone using this method.","r":"Student investigates cutting-edge AI research on LLM memorization, probing technical literature independently.","d":0,"dc":""},{"id":"LH1-04","p":"18","w":1,"l":"Grow","M":"Learning How To Learn","m":"1. Active Inquiry & Discovery","v":["Explore","Question"],"x":"I'd like to learn more about these more in-depth tools and brainstorm ways that they can be of use in multimedia development. What processes can we streamline? What services can we enhance?","r":"Student generates inquiry questions to guide their own future AI exploration in multimedia.","d":0,"dc":""},{"id":"LH1-05","p":"C","w":10,"l":"Learn","M":"Learning How To Learn","m":"1. Active Inquiry & Discovery","v":["Research","Investigate"],"x":"I found it fascinating that they didn't just rely on human observation they used motion data and algorithms to automatically find episodes of problem behavior in real time. Understanding the 'why' behind it really clicked for me.","r":"Student investigates wearable sensor technology for behavioral assessment, driven by research curiosity.","d":0,"dc":""},{"id":"LH2-01","p":"8","w":2,"l":"Learn","M":"Learning How To Learn","m":"2. Metacognitive Reflection","v":["Analyze","Introspect"],"x":"Thinking about the Socratic method of using GPT makes me think of the chunking of our assignments this semester, as well. Sheer describes and shows how results become better and more usable by building prompts on top of each other. The same mentality goes into developing course content \u2013 we have to start with the basics and ensure our students understand.","r":"Student analyzes their own thinking process by drawing a metacognitive parallel between prompt engineering and pedagogical scaffolding.","d":0,"dc":""},{"id":"LH2-02","p":"F","w":7,"l":"Learn","M":"Learning How To Learn","m":"2. Metacognitive Reflection","v":["Contemplate","Analyze"],"x":"The driver behind this conversation is the idea that innovation outpaces foresight. What I mean is that the speed at which GenAI integrates into our daily lives advances so quickly that human cognition is left behind, with us navigating the future in hindsight.","r":"Student contemplates the cognitive implications of rapid AI adoption, analyzing the gap between innovation speed and human adaptation.","d":0,"dc":""},{"id":"LH2-03","p":"H","w":7,"l":"Learn","M":"Learning How To Learn","m":"2. Metacognitive Reflection","v":["Analyze","Introspect"],"x":"A 2025 MIT Sloan study found that generative AI-enhanced employee creativity, but only for those with strong metacognitive strategies, meaning they reflected on their thinking, adjusted their prompts, and actively engaged with the tool. Those who were passive users saw little to no improvement.","r":"Student engages with research on metacognition and AI, analyzing the role of self-awareness in effective AI use.","d":0,"dc":""},{"id":"LH2-04","p":"E","w":10,"l":"Learn","M":"Learning How To Learn","m":"2. Metacognitive Reflection","v":["Contemplate","Analyze"],"x":"I have been thinking about how AI makes us think about academic integrity. Not just in terms of cheating or plagiarism, but in how we define meaningful work. As AI tools become more accessible, students can use them to generate outlines, brainstorm ideas, or rephrase content. That raises tough questions.","r":"Student contemplates how AI challenges their foundational assumptions about what constitutes meaningful academic work.","d":0,"dc":""},{"id":"LH3-01","p":"7","w":7,"l":"Grow","M":"Learning How To Learn","m":"3. Self-Regulatory Monitoring","v":["Review","Assess"],"x":"Pertaining to academic and workplace settings, AI is a powerful tool that can help with research and tasks, but it's not perfect. It's essential for folks to critically review AI outputs to ensure, 1, that the information exists, and 2, they're accurate before relying on them for important work.","r":"Student assesses and reviews their own learning about AI verification, monitoring the quality of their AI usage practices.","d":0,"dc":""},{"id":"LH3-02","p":"3","w":7,"l":"Learn","M":"Learning How To Learn","m":"3. Self-Regulatory Monitoring","v":["Monitor","Assess"],"x":"My perspective hasn't changed from my previous post; AI is a great tool for academic or workplace environments. We must understand that AI provides hallucinations, and the information must be checked to ensure accuracy. AI is not perfect, and depending on how we manage it or how effective our understanding of prompt engineering is will affect the accuracy and efficiency of the tool.","r":"Student monitors their learning progress by assessing their evolving understanding of AI limitations.","d":0,"dc":""},{"id":"LH3-03","p":"1","w":12,"l":"Learn","M":"Learning How To Learn","m":"3. Self-Regulatory Monitoring","v":["Review","Assess"],"x":"Over the course of this semester, I've delved into various aspects of AI, gaining insights and learning about its potential applications. Here's a recap of some of my discoveries: Maestra AI, Virtual Eye Exam, Educational AI Tools, Prompt Engineering Challenges, HTML Coding Assistance, Time Management.","r":"Student conducts a systematic self-review of their learning across the entire semester, assessing breadth of exploration.","d":0,"dc":""},{"id":"LH3-04","p":"9","w":12,"l":"Learn","M":"Learning How To Learn","m":"3. Self-Regulatory Monitoring","v":["Monitor","Assess"],"x":"AI has done what I anticipated it would, which is I have found myself using it quite often in my daily life. Students start back next week, which means teachers and staff started yesterday. I found myself utilizing various AI models to accomplish this in a timely manner, allowing me to focus on more important items.","r":"Student monitors their own AI adoption trajectory, assessing how the semester's learning has integrated into daily practice.","d":0,"dc":""},{"id":"LH4-01","p":"10","w":9,"l":"Learn","M":"Learning How To Learn","m":"4. Iterative Optimization","v":["Adjust","Improve"],"x":"I used ChatGBT to create different tools that I might use on projects in the future. My first attempts created tables that contained the elements, but some were not in the right place. My row labels fell under column A's labels. I then prompted the AI to 'modify' the table. It took a couple of tries to get it correct.","r":"Student iteratively adjusts their prompts to improve AI output quality, demonstrating optimization of their learning approach.","d":0,"dc":""},{"id":"LH4-02","p":"5","w":2,"l":"Learn","M":"Learning How To Learn","m":"4. Iterative Optimization","v":["Improve"],"x":"I have tried to make a point to actively use it more often, even when I wouldn't normally do so, just to gain a better understanding of what it can do, what types of prompts generate the best results, and when it makes the most sense to seek it out.","r":"Student deliberately adjusts their learning strategy by forcing more frequent AI use to improve their understanding.","d":0,"dc":""},{"id":"LH4-03","p":"7","w":5,"l":"Grow","M":"Learning How To Learn","m":"4. Iterative Optimization","v":["Improve"],"x":"I plan to incorporate AI-driven choose-your-own-adventure modules into trainings whenever possible. The immediacy of feedback and creative way to share information is right up my alley as an instructional designer, and this exercise has allowed me to get more fluent in using AI to enhance the design of learning.","r":"Student commits to iteratively improving their AI-enhanced instructional design practice.","d":0,"dc":""},{"id":"LH4-04","p":"3","w":6,"l":"Learn","M":"Learning How To Learn","m":"4. Iterative Optimization","v":["Adjust","Improve"],"x":"After reviewing the previous prompts, I adjusted the words and was more precise about what exactly I wanted. Plus, I asked for the program to provide me with 3-4 examples instead of one. Choosing one out of the outcomes and continuing to create from that picture.","r":"Student adjusts their prompting strategy based on prior results, improving their process through iteration.","d":0,"dc":""},{"id":"HD4-04","p":"19","w":3,"l":"Grow","M":"Human Dimension","m":"4. Collaborative Interaction","v":["Share","Engage","Support"],"x":"In fact, I have already assigned AI-related content to my team (last week's prompt engineering video - thanks, Dr. H!) to encourage them interact with AI and explore its capabilities. I will continue to encourage my teams to responsibly explore what AI can take off of their plates and how it can potentially provide the spark to innovate and illuminate certain problem or opaque areas of their work.","r":"Student actively shares AI learning resources with their professional team, engaging them in exploration and supporting their development.","d":0,"dc":""},{"id":"HD4-05","p":"12","w":4,"l":"Grow","M":"Human Dimension","m":"4. Collaborative Interaction","v":["Share","Communicate","Support"],"x":"Not only do I plan to discuss AI with my students more often, but I do plan on sharing what I am learning with my colleagues to see if there are ways to incorporate AI into the technology we use in our classrooms, labs, and clinical settings to enhance learning among our students and make them more successful. It is very possible that my colleagues may not be aware of these uses of AI that would benefit them as program directors!","r":"Student communicates plans to share AI knowledge with colleagues and students, supporting their professional growth through collaborative exchange.","d":0,"dc":""},{"id":"HD4-06","p":"18","w":4,"l":"Grow","M":"Human Dimension","m":"4. Collaborative Interaction","v":["Collaborate","Share","Engage"],"x":"We're working on the CTLT communication plan for the fall that will go out to all faculty and staff, and I'd like to work on developing/finding resources to help more folks in my organization embrace AI.","r":"Student engages in collaborative planning to develop AI resources for organizational sharing.","d":0,"dc":""},{"id":"HD4-07","p":"H","w":5,"l":"Learn","M":"Human Dimension","m":"4. Collaborative Interaction","v":["Engage","Collaborate","Support"],"x":"Typically, I would be the one who would be interviewing while at the same time taking copious notes to ensure I captured everything. With AI, I can simply transcribe the meeting and relax. This has allowed me to release the need to focus on capturing data and concentrate on the quality of the conversation and ensure I am employing active listening. In the past, when interviewing or in a forum, I would not really be focused on making (virtual) eye contact, nodding my head, or sincerely engaging my audience because I would be so busy taking notes. Knowing that AI had all that covered, I was able to hone in on my audience and make a stronger mental connection to their message.","r":"Student describes how AI freed them to engage more deeply in collaborative interactions, improving active listening and human connection during stakeholder forums.","d":0,"dc":""},{"id":"CA1-04","p":"11","w":10,"l":"Change","M":"Caring","m":"1. Valuing & Esteem","v":["Value","Appreciate"],"x":"I created my own custom GPT, named 'Email Enhancer.' It has been a game-changer for me. Whenever I need to draft an email, I input the main points I want to convey into the prompt. The GPT then helps me structure my thoughts into a clear, concise, and professional message with a positive spin. It really enhances my ability to be concise and positive at the same time.","r":"Student expresses genuine appreciation for the value of their custom GPT, recognizing its worth as transformative to their daily communication.","d":0,"dc":""},{"id":"CA1-05","p":"4","w":11,"l":"Change","M":"Caring","m":"1. Valuing & Esteem","v":["Appreciate","Value"],"x":"I am beginning to embrace a lot of the technology, and I am grateful I got to explore so much in this class!","r":"Student expresses gratitude and growing appreciation for AI, demonstrating affective valuing of the learning experience.","d":0,"dc":""},{"id":"CA1-06","p":"15","w":7,"l":"Learn","M":"Caring","m":"1. Valuing & Esteem","v":["Appreciate","Value"],"x":"It was just enough from Chat to get my motor going and then I could take it from there. But the potential to get a boost in skills and shave time off of certain activities makes me feel that generative AI has absolutely earned a seat at the table.","r":"Student articulates deep appreciation for AI's value, using the metaphor of 'earning a seat at the table' to convey genuine esteem.","d":0,"dc":""},{"id":"CA1-07","p":"K","w":4,"l":"Learn","M":"Caring","m":"1. Valuing & Esteem","v":["Appreciate","Value"],"x":"This week, I gained a deeper appreciation for the practical ways AI can be integrated into the academic and professional environments. I now see AI as a powerful partner that, when used ethically and thoughtfully, can elevate the quality of my work without compromising my voice or integrity. This week, AI reinforced that AI is not about convenient technology but about expanding our current boundaries and making an impact.","r":"Student develops genuine appreciation and esteem for AI as a meaningful professional partner.","d":0,"dc":""},{"id":"CA1-08","p":"9","w":2,"l":"Learn","M":"Caring","m":"1. Valuing & Esteem","v":["Value","Respect"],"x":"The document ChatGPT was able to create for the assignment was fantastic and scary at the same time. It was detailed, formatted well, and tailored to fit the organization and problem of practice. It exceeded my expectations.","r":"Student expresses a mixture of admiration and respect for AI's output quality, valuing its capabilities even while acknowledging discomfort.","d":0,"dc":""},{"id":"IN3-04","p":"5","w":6,"l":"Learn","M":"Integration","m":"3. Structural Synthesis","v":["Compile","Assemble"],"x":"First, I uploaded the videos to YouTube to get transcriptions. Once I had the text, I used ChatGPT to create a structured outline for an eLearning course in Articulate Rise. Playing around with different prompts, I ended up with scripts for narration, learning objectives, section and module headings, and even a quiz with various question types.","r":"Student assembles disparate components (video transcripts, learning objectives, narration scripts, assessments) into a cohesive eLearning course structure.","d":1,"dc":"Application: 1. Execution & Utilization"},{"id":"IN3-05","p":"4","w":12,"l":"Learn","M":"Integration","m":"3. Structural Synthesis","v":["Assemble","Compile"],"x":"By leveraging Synthesia, we created lifelike video training modules without the logistical constraints of traditional filming. These virtual avatars delivered precise and consistent training content, ensuring all team members received the same high-quality information tailored to various scenarios. DALL-E's ability to generate images from textual descriptions further enhanced our training materials. We crafted customized visual aids that aligned perfectly with the video content, making the learning experience more engaging and effective. This combination of AI-driven video and imagery created a comprehensive and interactive training environment.","r":"Student assembles Synthesia video modules with DALL-E generated imagery into a unified, comprehensive training environment.","d":1,"dc":"Application: 5. Creative Synthesis"},{"id":"IN3-06","p":"18","w":4,"l":"Learn","M":"Integration","m":"3. Structural Synthesis","v":["Compile","Assemble"],"x":"I've been putting together a strategic plan/annual report for my unit, and that has involved collecting data, creating goals, showcasing successes, and planning for the future. I used AI to help me with ALL of that. I'm not experienced in creating documents like this, and so I am relying a lot on AI to help me formulate these components. I feel like I'm learning how to combine my own voice with AI generated copy, so it doesn't sound so 'AI-esque.'","r":"Student compiles multiple disparate components (data, goals, successes, plans) into a cohesive strategic document, assembling their voice with AI output.","d":0,"dc":""},{"id":"IN3-07","p":"N","w":5,"l":"Learn","M":"Integration","m":"3. Structural Synthesis","v":["Compile","Assemble"],"x":"In one real use case, a group at NASA fed it 15 documents and 15 videos which was over 100 pages of text and more than 6 hours of content. In just minutes, LunAI generated clear summaries and key takeaways. LunAI played a big role in helping teams investigate an aircraft issue, turning a complex situation into something manageable and easy to understand for everyone involved.","r":"Student describes how their AI tool compiled massive volumes of disparate content types (documents, videos) into a cohesive, synthesized output for team use.","d":0,"dc":""}];
+
+// Canonical orderings
+const LCG_ORDER = ['Learn','Change','Grow'];
+const MAJOR_ORDER = ['Foundational Knowledge','Application','Integration','Human Dimension','Caring','Learning How To Learn'];
+const WEEKS_ALL = [1,2,3,4,5,6,7,8,9,10,11,12];
+
+// Color lookups
+const CSS = getComputedStyle(document.documentElement);
+const pv = k => CSS.getPropertyValue(k).trim();
+// NOTE: we re-read on theme change via refreshColors()
+let C = {};
+function refreshColors() {
+  const s = getComputedStyle(document.documentElement);
+  const g = k => s.getPropertyValue(k).trim();
+  C = {
+    ink: g('--ink'), inkSoft: g('--ink-soft'), inkMute: g('--ink-mute'),
+    line: g('--line'), lineSoft: g('--line-soft'),
+    surface: g('--surface'), surface2: g('--surface-2'), surface3: g('--surface-3'),
+    primary: g('--primary'), primaryDeep: g('--primary-deep'), primaryTint: g('--primary-tint'),
+    accent: g('--accent'),
+    major: {
+      'Foundational Knowledge': g('--fk-foundational'),
+      'Application': g('--fk-application'),
+      'Integration': g('--fk-integration'),
+      'Human Dimension': g('--fk-human'),
+      'Caring': g('--fk-caring'),
+      'Learning How To Learn': g('--fk-learning'),
+    },
+    lcg: { 'Learn': g('--lcg-learn'), 'Change': g('--lcg-change'), 'Grow': g('--lcg-grow') },
+  };
+}
+refreshColors();
+
+// Minor -> Major lookup
+const MINOR_TO_MAJOR = {};
+RAW.forEach(r => { MINOR_TO_MAJOR[r.m] = r.M; });
+const MINORS_BY_MAJOR = {};
+MAJOR_ORDER.forEach(m => MINORS_BY_MAJOR[m] = []);
+Object.entries(MINOR_TO_MAJOR).forEach(([mn, mj]) => { if (!MINORS_BY_MAJOR[mj].includes(mn)) MINORS_BY_MAJOR[mj].push(mn); });
+Object.values(MINORS_BY_MAJOR).forEach(list => list.sort());
+
+// All verbs
+const ALL_VERBS = Array.from(new Set(RAW.flatMap(r => r.v))).sort();
+
+// All participants (numeric sort numerics first, then letters)
+const ALL_PARTICIPANTS = Array.from(new Set(RAW.map(r => r.p))).sort((a,b) => {
+  const na = /^\d+$/.test(a), nb = /^\d+$/.test(b);
+  if (na && nb) return parseInt(a) - parseInt(b);
+  if (na) return -1; if (nb) return 1;
+  return a.localeCompare(b);
+});
+
+// ============================= FILTER STATE =============================
+const F = {
+  week: new Set(), lcg: new Set(), major: new Set(), minor: new Set(), verb: new Set(), dual: new Set(),
+};
+const FILTER_LABELS = {
+  week: 'Week', lcg: 'LCG', major: 'Major', minor: 'Minor', verb: 'Verb', dual: 'Dual-Coded'
+};
+function hasAnyFilters(){ return Object.values(F).some(s => s.size > 0); }
+
+// Apply filters -> subset of RAW
+function applyFilters(data = RAW) {
+  return data.filter(r => {
+    if (F.week.size && !F.week.has(r.w)) return false;
+    if (F.lcg.size && !F.lcg.has(r.l)) return false;
+    if (F.major.size && !F.major.has(r.M)) return false;
+    if (F.minor.size && !F.minor.has(r.m)) return false;
+    if (F.dual.size && !F.dual.has(r.d ? 'Y' : 'N')) return false;
+    if (F.verb.size) {
+      const any = r.v.some(v => F.verb.has(v));
+      if (!any) return false;
+    }
+    return true;
+  });
+}
+
+// ============================= DROPDOWNS =============================
+function buildDropdowns(){
+  // Week
+  buildDd('week', WEEKS_ALL.map(w => {
+    const has = RAW.some(r => r.w === w);
+    return { val: w, label: `Week ${w}`, count: RAW.filter(r => r.w === w).length, disabled: !has };
+  }));
+  // LCG
+  buildDd('lcg', LCG_ORDER.map(l => ({ val: l, label: l, count: RAW.filter(r=>r.l===l).length, color: C.lcg[l] })));
+  // Major
+  buildDd('major', MAJOR_ORDER.map(m => ({ val: m, label: m, count: RAW.filter(r=>r.M===m).length, color: C.major[m] })));
+  // Minor grouped by Major
+  const minorGroups = MAJOR_ORDER.map(mj => ({
+    head: mj, color: C.major[mj],
+    items: MINORS_BY_MAJOR[mj].map(mn => ({ val: mn, label: mn, count: RAW.filter(r=>r.m===mn).length }))
+  }));
+  buildDd('minor', null, minorGroups);
+  // Verbs (search, counts)
+  buildDd('verb', ALL_VERBS.map(v => ({ val: v, label: v, count: RAW.filter(r=>r.v.includes(v)).length })), null, true);
+  // Dual
+  buildDd('dual', [
+    { val: 'Y', label: 'Dual-coded (Y)', count: RAW.filter(r=>r.d).length },
+    { val: 'N', label: 'Single-coded (N)', count: RAW.filter(r=>!r.d).length }
+  ]);
+}
+
+function buildDd(key, items, groups, withSearch = false){
+  const wrap = document.querySelector(`.dd[data-filter="${key}"]`);
+  const panel = wrap.querySelector('.dd-panel');
+  panel.innerHTML = '';
+  if (withSearch) {
+    const s = document.createElement('input');
+    s.className = 'dd-search'; s.placeholder = 'Search…'; s.type = 'search';
+    s.addEventListener('input', e => {
+      const q = e.target.value.toLowerCase();
+      panel.querySelectorAll('.dd-opt').forEach(o => {
+        o.style.display = o.dataset.label.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+    panel.appendChild(s);
+  }
+  if (groups) {
+    groups.forEach(g => {
+      const h = document.createElement('div'); h.className = 'dd-group-head';
+      h.innerHTML = `<span class="sw" style="background:${g.color}"></span>${g.head}`;
+      panel.appendChild(h);
+      g.items.forEach(it => panel.appendChild(mkOpt(key, it)));
+    });
+  } else {
+    items.forEach(it => panel.appendChild(mkOpt(key, it)));
+  }
+  // Toggle
+  const btn = wrap.querySelector('.dd-btn');
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.dd-panel.show').forEach(p => { if (p !== panel) p.classList.remove('show'); });
+    panel.classList.toggle('show');
+  });
+}
+
+function mkOpt(key, it){
+  const el = document.createElement('label');
+  el.className = 'dd-opt' + (it.disabled ? ' disabled' : '');
+  el.dataset.label = it.label;
+  const cb = document.createElement('input');
+  cb.type = 'checkbox'; cb.value = it.val; cb.disabled = !!it.disabled;
+  cb.checked = F[key].has(key === 'week' ? Number(it.val) : it.val);
+  cb.addEventListener('change', () => {
+    const v = key === 'week' ? Number(it.val) : it.val;
+    if (cb.checked) F[key].add(v); else F[key].delete(v);
+    refreshAll();
+  });
+  el.appendChild(cb);
+  if (it.color) {
+    const sw = document.createElement('span'); sw.className='pill-sw';
+    sw.style.cssText = `background:${it.color}; flex-shrink:0;`;
+    el.appendChild(sw);
+  }
+  const t = document.createElement('span'); t.textContent = it.label; el.appendChild(t);
+  const n = document.createElement('span'); n.className='n'; n.textContent = it.count;
+  el.appendChild(n);
+  return el;
+}
+
+function closeAllDropdowns(){ document.querySelectorAll('.dd-panel.show').forEach(p => p.classList.remove('show')); }
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.dd')) closeAllDropdowns();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllDropdowns(); });
+
+function updateDdButtons(){
+  document.querySelectorAll('.dd').forEach(wrap => {
+    const key = wrap.dataset.filter;
+    const btn = wrap.querySelector('.dd-btn');
+    const n = F[key].size;
+    const label = btn.childNodes[0];
+    btn.classList.toggle('active', n > 0);
+    // Rebuild inner
+    btn.innerHTML = '';
+    btn.insertAdjacentText('afterbegin', filterButtonText(key));
+    if (n > 0) {
+      const b = document.createElement('span'); b.className='badge'; b.textContent = n; btn.appendChild(b);
+    }
+    const chev = document.createElement('span'); chev.className = 'chev'; btn.appendChild(chev);
+  });
+}
+function filterButtonText(key){
+  switch(key){
+    case 'week': return 'Week ';
+    case 'lcg': return 'LCG Prompt ';
+    case 'major': return 'Major Category ';
+    case 'minor': return 'Minor Category ';
+    case 'verb': return 'Verb Indicator ';
+    case 'dual': return 'Dual-Coded ';
+  } return key;
+}
+
+// ============================= CHIPS =============================
+function renderChips(){
+  const bar = document.getElementById('chipbar');
+  bar.innerHTML = '';
+  if (!hasAnyFilters()) return;
+  for (const key of Object.keys(F)) {
+    F[key].forEach(v => {
+      const c = document.createElement('span'); c.className = 'chip';
+      c.innerHTML = `<span style="opacity:.65">${FILTER_LABELS[key]}:</span>&nbsp;${key==='week' ? 'W'+v : v}`;
+      const x = document.createElement('button');
+      x.innerHTML = '×'; x.setAttribute('aria-label', `Remove filter ${FILTER_LABELS[key]} ${v}`);
+      x.addEventListener('click', () => { F[key].delete(v); refreshAll(); });
+      c.appendChild(x); bar.appendChild(c);
+    });
+  }
+  const clr = document.createElement('button');
+  clr.className = 'chip-clear'; clr.textContent = 'Clear all';
+  clr.addEventListener('click', () => {
+    Object.values(F).forEach(s => s.clear()); refreshAll();
+  });
+  bar.appendChild(clr);
+  // Also sync dropdown checkboxes
+  document.querySelectorAll('.dd-opt input').forEach(cb => {
+    const wrap = cb.closest('.dd'); if (!wrap) return;
+    const key = wrap.dataset.filter;
+    const v = key === 'week' ? Number(cb.value) : cb.value;
+    cb.checked = F[key].has(v);
+  });
+}
+
+// ============================= KPIs =============================
+function renderKpis(){
+  const rows = applyFilters();
+  const kpiRow = document.getElementById('kpiRow');
+  const total = rows.length;
+  const participants = new Set(rows.map(r=>r.p)).size;
+  const weeks = new Set(rows.map(r=>r.w)).size;
+  const dualN = rows.filter(r=>r.d).length;
+  const byLcg = Object.fromEntries(LCG_ORDER.map(l => [l, rows.filter(r=>r.l===l).length]));
+  const byMajor = Object.fromEntries(MAJOR_ORDER.map(m => [m, rows.filter(r=>r.M===m).length]));
+  const topMajor = MAJOR_ORDER.slice().sort((a,b) => byMajor[b] - byMajor[a])[0];
+  const topMajorN = byMajor[topMajor] || 0;
+
+  kpiRow.innerHTML = '';
+  const tiles = [
+    { lbl: 'Total Exemplars', val: total, cap: hasAnyFilters() ? `filtered from ${RAW.length}` : `all exemplars`, dot: C.primary, hero: true },
+    { lbl: 'Unique Participants', val: participants, cap: `of 30 total in dataset`, dot: C.major['Human Dimension'] },
+    { lbl: 'Weeks Covered', val: weeks, cap: `of 11 active weeks (week 8 empty)`, dot: C.major['Integration'] },
+    { lbl: 'Dual-Coded', val: dualN, pct: total ? pct(dualN, total) : null, cap: total ? `${pct(dualN, total)}% of filtered set` : '—', dot: C.accent },
+    { lbl: 'Learn Prompt', val: byLcg['Learn'], pct: total ? pct(byLcg['Learn'], total) : null, cap: shareCap(byLcg['Learn'], total), dot: C.lcg['Learn'] },
+    { lbl: 'Change Prompt', val: byLcg['Change'], pct: total ? pct(byLcg['Change'], total) : null, cap: shareCap(byLcg['Change'], total), dot: C.lcg['Change'] },
+    { lbl: 'Grow Prompt', val: byLcg['Grow'], pct: total ? pct(byLcg['Grow'], total) : null, cap: shareCap(byLcg['Grow'], total), dot: C.lcg['Grow'] },
+    { lbl: 'Top Major Category', val: topMajorN, cap: topMajor || '—', dot: C.major[topMajor] || C.primary, small: true },
+  ];
+  tiles.forEach(t => {
+    const el = document.createElement('div');
+    el.className = 'kpi' + (t.hero ? ' hero' : '');
+    el.innerHTML = `
+      <div class="kpi-label"><span class="kpi-dot" style="background:${t.dot}"></span>${t.lbl}</div>
+      <div class="kpi-val num">${t.small && t.cap ? t.val : t.val}${t.pct != null ? `<span class="pct">${t.pct}%</span>` : ''}</div>
+      <div class="kpi-cap">${t.cap || ''}</div>
+    `;
+    kpiRow.appendChild(el);
+  });
+
+  // Secondary: mini per Major
+  const miniRow = document.getElementById('kpiRowMajor');
+  miniRow.innerHTML = '';
+  const max = Math.max(1, ...Object.values(byMajor));
+  MAJOR_ORDER.forEach(m => {
+    const v = byMajor[m];
+    const el = document.createElement('div'); el.className = 'kpi-mini';
+    el.innerHTML = `
+      <div class="kpi-label"><span class="kpi-dot" style="background:${C.major[m]}"></span>${m}</div>
+      <div class="kpi-val num">${v}</div>
+      <div class="kpi-bar"><div style="width:${(v/max)*100}%; background:${C.major[m]}"></div></div>
+    `;
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', () => { toggleSet(F.major, m); refreshAll(); });
+    miniRow.appendChild(el);
+  });
+
+  // Top 5 Minor pills (among filtered)
+  const byMinor = {};
+  rows.forEach(r => { byMinor[r.m] = (byMinor[r.m]||0) + 1; });
+  const top5 = Object.entries(byMinor).sort((a,b) => b[1]-a[1]).slice(0,5);
+  const tml = document.getElementById('topMinorList');
+  tml.innerHTML = '';
+  if (!top5.length) { tml.innerHTML = `<span style="color:var(--ink-mute); font-size:12px;">No minor categories in current filter.</span>`; return; }
+  top5.forEach(([mn, n]) => {
+    const mj = MINOR_TO_MAJOR[mn];
+    const el = document.createElement('span'); el.className = 'pill';
+    el.innerHTML = `<span class="pill-sw" style="background:${C.major[mj]}"></span>${mn}<span class="pill-count num">${n}</span>`;
+    el.addEventListener('click', () => { toggleSet(F.minor, mn); refreshAll(); });
+    tml.appendChild(el);
+  });
+}
+function shareCap(n, total) { return total ? `${pct(n, total)}% of filtered set` : '—'; }
+function pct(n, d) { return d ? (Math.round(n * 1000 / d) / 10).toFixed(1) : 0; }
+function toggleSet(s, v) { s.has(v) ? s.delete(v) : s.add(v); }
+
+// ============================= INSIGHTS =============================
+function renderInsights(){
+  const rows = applyFilters();
+  const grid = document.getElementById('insightsGrid');
+  const total = rows.length;
+  if (!total) {
+    grid.innerHTML = `<div class="ins-item"><span class="ins-lbl">Empty set</span>No exemplars match the current filters. <strong>Clear a filter</strong> to see the corpus.</div>`;
+    return;
+  }
+
+  const byLcg = Object.fromEntries(LCG_ORDER.map(l => [l, rows.filter(r=>r.l===l).length]));
+  const byMajor = Object.fromEntries(MAJOR_ORDER.map(m => [m, rows.filter(r=>r.M===m).length]));
+  const byWeek = {};
+  rows.forEach(r => byWeek[r.w] = (byWeek[r.w]||0) + 1);
+  const byMinor = {};
+  rows.forEach(r => byMinor[r.m] = (byMinor[r.m]||0) + 1);
+
+  // Dominant LCG
+  const domLcg = LCG_ORDER.slice().sort((a,b) => byLcg[b] - byLcg[a])[0];
+  // Peak weeks
+  const maxWeekN = Math.max(...Object.values(byWeek));
+  const peakWeeks = Object.keys(byWeek).filter(w => byWeek[w] === maxWeekN).map(Number).sort((a,b)=>a-b);
+  // Most / least represented Major (ignore zero)
+  const majSorted = Object.entries(byMajor).filter(e=>e[1]>0).sort((a,b) => b[1] - a[1]);
+  const mostMaj = majSorted[0], leastMaj = majSorted[majSorted.length - 1];
+  // Dual rate + top dual pair
+  const dualN = rows.filter(r=>r.d).length;
+  const dualPairs = {};
+  rows.filter(r=>r.d && r.dc).forEach(r => {
+    const key = r.M + ' + ' + r.dc.split(':')[0].trim();
+    dualPairs[key] = (dualPairs[key]||0) + 1;
+  });
+  const topDualPair = Object.entries(dualPairs).sort((a,b)=>b[1]-a[1])[0];
+
+  // Notable shift: concentrations (full corpus signal)
+  let shiftLine = '';
+  const caringByLcg = { Learn: RAW.filter(r=>r.M==='Caring'&&r.l==='Learn').length,
+                       Change: RAW.filter(r=>r.M==='Caring'&&r.l==='Change').length,
+                       Grow: RAW.filter(r=>r.M==='Caring'&&r.l==='Grow').length };
+  const caringTotal = caringByLcg.Learn + caringByLcg.Change + caringByLcg.Grow;
+  if (caringTotal) {
+    const cgShare = pct(caringByLcg.Change + caringByLcg.Grow, caringTotal);
+    shiftLine = `Caring concentrates in <strong>Change + Grow</strong> prompts (<span class="ins-num">${cgShare}%</span> of Caring codes).`;
+  }
+  // Absence signal
+  const lhtlByLcg = { Change: RAW.filter(r=>r.M==='Learning How To Learn'&&r.l==='Change').length };
+  let absenceLine = '';
+  if (lhtlByLcg.Change === 0) {
+    absenceLine = `<strong>Learning How To Learn</strong> is <span class="ins-num">absent</span> from the Change prompt across the full corpus.`;
+  }
+
+  // Week-over-week delta callout
+  let wowLine = '';
+  const weekKeys = Object.keys(byWeek).map(Number).sort((a,b)=>a-b);
+  if (weekKeys.length >= 2) {
+    const deltas = [];
+    for (let i=1; i<weekKeys.length; i++) {
+      deltas.push({ w: weekKeys[i], d: byWeek[weekKeys[i]] - byWeek[weekKeys[i-1]] });
+    }
+    const biggest = deltas.slice().sort((a,b) => Math.abs(b.d) - Math.abs(a.d))[0];
+    if (biggest && biggest.d !== 0) {
+      const dir = biggest.d > 0 ? 'surge' : 'drop';
+      wowLine = `Sharpest week-over-week ${dir}: <strong>Week ${biggest.w}</strong> shifted by <span class="ins-num">${biggest.d > 0 ? '+' : ''}${biggest.d}</span> exemplars vs. prior week.`;
+    }
+  }
+
+  const items = [
+    { lbl: 'Dominant LCG prompt', html: `<strong>${domLcg}</strong> accounts for <span class="ins-num">${pct(byLcg[domLcg], total)}%</span> of the filtered set (${byLcg[domLcg]} of ${total}).` },
+    { lbl: `Peak week${peakWeeks.length>1?'s':''}`, html: `<strong>Week${peakWeeks.length>1?'s':''} ${peakWeeks.join(', ')}</strong> carried the most volume at <span class="ins-num">${maxWeekN}</span> exemplar${maxWeekN===1?'':'s'}.` },
+    { lbl: 'Most represented', html: `<strong>${mostMaj[0]}</strong> leads with <span class="ins-num">${mostMaj[1]}</span> exemplars (${pct(mostMaj[1], total)}%).` },
+    { lbl: 'Least represented', html: `<strong>${leastMaj[0]}</strong> trails with <span class="ins-num">${leastMaj[1]}</span> exemplar${leastMaj[1]===1?'':'s'} (${pct(leastMaj[1], total)}%).` },
+    { lbl: 'Dual-coding rate', html: `<span class="ins-num">${pct(dualN, total)}%</span> of filtered exemplars carry a secondary code${topDualPair ? `. Top pairing: <strong>${topDualPair[0]}</strong>.` : '.'}` },
+  ];
+  if (wowLine) items.push({ lbl: 'Week-over-week', html: wowLine });
+  if (shiftLine) items.push({ lbl: 'Structural concentration', html: shiftLine });
+  if (absenceLine) items.push({ lbl: 'Notable absence', html: absenceLine });
+
+  grid.innerHTML = items.map(it => `<div class="ins-item"><span class="ins-lbl">${it.lbl}</span>${it.html}</div>`).join('');
+}
+
+// ============================= CHART.JS DEFAULTS =============================
+function applyChartDefaults() {
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = C.inkSoft;
+  Chart.defaults.borderColor = C.lineSoft;
+  Chart.defaults.plugins.legend.labels.boxWidth = 10;
+  Chart.defaults.plugins.legend.labels.boxHeight = 10;
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.tooltip.backgroundColor = C.ink;
+  Chart.defaults.plugins.tooltip.titleColor = C.surface;
+  Chart.defaults.plugins.tooltip.bodyColor = C.surface;
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius = 8;
+  Chart.defaults.plugins.tooltip.boxPadding = 4;
+  Chart.defaults.plugins.tooltip.titleFont = { size: 12, weight: 600 };
+  Chart.defaults.plugins.tooltip.bodyFont = { size: 11.5 };
+}
+applyChartDefaults();
+
+// ============================= CHART INSTANCES =============================
+const CH = {}; // holds Chart.js instances
+
+function destroyChart(key) { if (CH[key]) { CH[key].destroy(); delete CH[key]; } }
+
+function buildLcgDonut() {
+  const rows = applyFilters();
+  const total = rows.length;
+  const data = LCG_ORDER.map(l => rows.filter(r=>r.l===l).length);
+  destroyChart('lcg');
+  const ctx = document.getElementById('cLcg');
+  const empty = total === 0;
+  toggleEmpty(ctx, empty);
+  if (empty) return;
+  CH.lcg = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: LCG_ORDER,
+      datasets: [{
+        data, backgroundColor: LCG_ORDER.map(l => C.lcg[l]),
+        borderColor: C.surface, borderWidth: 3, hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '62%',
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 14, font: { size: 11.5 } } },
+        tooltip: {
+          callbacks: {
+            label: c => {
+              const v = c.parsed; return `${c.label}: ${v} (${pct(v,total)}%)`;
+            }
+          }
+        }
+      },
+      onClick: (_, els) => { if (els[0]) { toggleSet(F.lcg, LCG_ORDER[els[0].index]); refreshAll(); } }
+    }
+  });
+  dataViewTable('cLcg_dv', [['LCG Prompt','Count','% of total']],
+    LCG_ORDER.map((l,i) => [l, data[i], pct(data[i], total) + '%']));
+}
+
+function buildMajorBar() {
+  const rows = applyFilters();
+  const total = rows.length;
+  const counts = MAJOR_ORDER.map(m => ({ m, n: rows.filter(r=>r.M===m).length }));
+  counts.sort((a,b) => b.n - a.n);
+  destroyChart('major');
+  const ctx = document.getElementById('cMajor');
+  const empty = total === 0;
+  toggleEmpty(ctx, empty);
+  if (empty) return;
+  CH.major = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: counts.map(c => c.m),
+      datasets: [{
+        data: counts.map(c => c.n),
+        backgroundColor: counts.map(c => C.major[c.m]),
+        borderRadius: 4, borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: c => `${c.parsed.x} exemplars (${pct(c.parsed.x, total)}%)`,
+            title: items => items[0].label,
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: C.lineSoft, drawBorder: false }, ticks: { precision: 0 } },
+        y: { grid: { display: false }, ticks: { font: { size: 11 }, color: C.inkSoft } }
+      },
+      onClick: (_, els) => { if (els[0]) { toggleSet(F.major, counts[els[0].index].m); refreshAll(); } }
+    }
+  });
+  dataViewTable('cMajor_dv', [['Major Category','Count','% of total']],
+    counts.map(c => [c.m, c.n, pct(c.n, total) + '%']));
+}
+
+function buildTreemap() {
+  const rows = applyFilters();
+  const total = rows.length;
+  const data = [];
+  MAJOR_ORDER.forEach(mj => {
+    const minors = {};
+    rows.filter(r => r.M === mj).forEach(r => minors[r.m] = (minors[r.m]||0) + 1);
+    Object.entries(minors).forEach(([mn, n]) => {
+      data.push({ major: mj, minor: mn, v: n });
+    });
+  });
+  destroyChart('tree');
+  const ctx = document.getElementById('cTree');
+  const empty = data.length === 0;
+  toggleEmpty(ctx, empty);
+  if (empty) return;
+  CH.tree = new Chart(ctx, {
+    type: 'treemap',
+    data: {
+      datasets: [{
+        tree: data,
+        key: 'v', groups: ['major','minor'],
+        spacing: 1,
+        borderColor: C.surface, borderWidth: 1,
+        backgroundColor: ctx2 => {
+          if (ctx2.type !== 'data') return 'transparent';
+          const obj = ctx2.raw._data;
+          return C.major[obj.major] || C.primary;
+        },
+        labels: {
+          display: true, align: 'left', position: 'top',
+          color: '#fff', font: { size: 10.5, weight: 600 },
+          formatter: ctx2 => {
+            const obj = ctx2.raw._data;
+            if (!obj || !obj.minor) return '';
+            // Show minor label + count; shorten heading to digit part if tiny
+            const area = ctx2.raw.w * ctx2.raw.h;
+            if (area < 1500) return String(obj.v);
+            const m = obj.minor.length > 22 ? obj.minor.slice(0, 20) + '…' : obj.minor;
+            return [m, `${obj.v}`];
+          }
+        },
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => {
+              const obj = items[0].raw._data;
+              return obj.minor || obj.major;
+            },
+            label: item => {
+              const obj = item.raw._data;
+              return obj.minor
+                ? `${obj.major} · ${obj.v} exemplar${obj.v===1?'':'s'} (${pct(obj.v, total)}%)`
+                : `${obj.v} total`;
+            }
+          }
+        }
+      },
+      onClick: (_, els) => {
+        if (els[0]) {
+          const obj = els[0].element.$context.raw._data;
+          if (obj.minor) { toggleSet(F.minor, obj.minor); refreshAll(); }
+          else if (obj.major) { toggleSet(F.major, obj.major); refreshAll(); }
+        }
+      }
+    }
+  });
+  dataViewTable('cTree_dv', [['Major','Minor','Count','% of total']],
+    data.sort((a,b) => a.major.localeCompare(b.major) || b.v - a.v)
+        .map(d => [d.major, d.minor, d.v, pct(d.v, total) + '%']));
+}
+
+function buildWeekLcg() {
+  const rows = applyFilters();
+  const total = rows.length;
+  const weeks = [1,2,3,4,5,6,7,9,10,11,12];
+  const datasets = LCG_ORDER.map(l => ({
+    label: l,
+    data: weeks.map(w => rows.filter(r => r.w === w && r.l === l).length),
+    backgroundColor: hexAlpha(C.lcg[l], .55),
+    borderColor: C.lcg[l], borderWidth: 2,
+    fill: true, tension: .35, pointRadius: 2.5, pointHoverRadius: 5
+  }));
+  destroyChart('weekLcg');
+  const ctx = document.getElementById('cWeekLcg');
+  toggleEmpty(ctx, total === 0);
+  if (!total) return;
+  CH.weekLcg = new Chart(ctx, {
+    type: 'line',
+    data: { labels: weeks.map(w => `W${w}`), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 14 } },
+        tooltip: {
+          callbacks: {
+            title: items => `Week ${items[0].label.slice(1)}`,
+            label: c => `${c.dataset.label}: ${c.parsed.y}`,
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, grid: { color: C.lineSoft }, ticks: { precision: 0 } }
+      }
+    }
+  });
+  dataViewTable('cWeekLcg_dv',
+    [['Week', ...LCG_ORDER]],
+    weeks.map(w => [`W${w}`, ...LCG_ORDER.map(l => rows.filter(r => r.w===w && r.l===l).length)]));
+}
+
+function buildWeekMajor() {
+  const rows = applyFilters();
+  const weeks = [1,2,3,4,5,6,7,9,10,11,12];
+  const datasets = MAJOR_ORDER.map(m => ({
+    label: m,
+    data: weeks.map(w => rows.filter(r => r.w === w && r.M === m).length),
+    borderColor: C.major[m], backgroundColor: C.major[m],
+    borderWidth: 2, tension: .3, pointRadius: 2, pointHoverRadius: 5, fill: false
+  }));
+  destroyChart('weekMajor');
+  const ctx = document.getElementById('cWeekMajor');
+  toggleEmpty(ctx, rows.length === 0);
+  if (!rows.length) return;
+  CH.weekMajor = new Chart(ctx, {
+    type: 'line',
+    data: { labels: weeks.map(w => `W${w}`), datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'nearest', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 10, font: { size: 10.5 } } },
+        tooltip: {
+          callbacks: {
+            title: items => `Week ${items[0].label.slice(1)}`,
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { grid: { color: C.lineSoft }, ticks: { precision: 0 } }
+      }
+    }
+  });
+  dataViewTable('cWeekMajor_dv',
+    [['Week', ...MAJOR_ORDER]],
+    weeks.map(w => [`W${w}`, ...MAJOR_ORDER.map(m => rows.filter(r => r.w===w && r.M===m).length)]));
+}
+
+function buildSmallMultiples(){
+  const rows = applyFilters();
+  const weeks = [1,2,3,4,5,6,7,9,10,11,12];
+  const holder = document.getElementById('smallMult');
+  holder.innerHTML = '';
+  LCG_ORDER.forEach((lcg, i) => {
+    const panel = document.createElement('div'); panel.className = 'sm-panel';
+    const t = document.createElement('div'); t.className='sm-title';
+    const subset = rows.filter(r => r.l === lcg);
+    t.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${C.lcg[lcg]};margin-right:6px;vertical-align:middle;"></span>${lcg} &nbsp;<span style="color:var(--ink-mute);font-weight:400;">${subset.length} exemplars</span>`;
+    const body = document.createElement('div'); body.className='sm-body';
+    const cvs = document.createElement('canvas'); cvs.id = 'sm_'+lcg;
+    body.appendChild(cvs);
+    panel.appendChild(t); panel.appendChild(body);
+    holder.appendChild(panel);
+
+    destroyChart('sm_'+lcg);
+    if (!subset.length) {
+      const e = document.createElement('div'); e.className='empty'; e.textContent = 'No exemplars';
+      body.appendChild(e);
+      return;
+    }
+    const datasets = MAJOR_ORDER.map(m => ({
+      label: m,
+      data: weeks.map(w => subset.filter(r => r.w===w && r.M===m).length),
+      borderColor: C.major[m], backgroundColor: C.major[m],
+      borderWidth: 1.75, tension: .3, pointRadius: 1.5, pointHoverRadius: 4, fill: false
+    }));
+    CH['sm_'+lcg] = new Chart(cvs, {
+      type: 'line',
+      data: { labels: weeks.map(w => w), datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: items => `Week ${items[0].label} · ${lcg}`,
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+          y: { grid: { color: C.lineSoft }, ticks: { precision: 0, font: { size: 9 } }, beginAtZero: true }
+        }
+      }
+    });
+  });
+}
+
+function buildHeatLcgMajor() {
+  const rows = applyFilters();
+  const wrap = document.getElementById('heatLM');
+  const total = rows.length;
+  wrap.innerHTML = '';
+  wrap.style.gridTemplateColumns = `140px repeat(${MAJOR_ORDER.length}, 1fr)`;
+  wrap.style.gridTemplateRows = `auto repeat(${LCG_ORDER.length}, 1fr)`;
+
+  // Corner
+  const corner = document.createElement('div'); corner.className='heat-corner';
+  wrap.appendChild(corner);
+  MAJOR_ORDER.forEach(m => {
+    const l = document.createElement('div'); l.className='heat-col-lbl';
+    l.innerHTML = `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${C.major[m]};margin-right:4px;vertical-align:middle"></span>${m}`;
+    wrap.appendChild(l);
+  });
+
+  // Determine max for scale
+  const maxV = Math.max(1, ...LCG_ORDER.flatMap(l => MAJOR_ORDER.map(m => rows.filter(r=>r.l===l&&r.M===m).length)));
+
+  LCG_ORDER.forEach(l => {
+    const lbl = document.createElement('div'); lbl.className='heat-row-lbl';
+    lbl.innerHTML = `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${C.lcg[l]};margin-right:6px"></span>${l}`;
+    wrap.appendChild(lbl);
+    MAJOR_ORDER.forEach(m => {
+      const v = rows.filter(r => r.l===l && r.M===m).length;
+      const cell = document.createElement('div'); cell.className='heat-cell'; cell.dataset.v = v;
+      const alpha = v === 0 ? 0 : 0.15 + 0.85 * (v / maxV);
+      cell.style.background = v === 0 ? '' : hexAlpha(C.major[m], alpha);
+      cell.style.color = v / maxV > 0.5 ? '#fff' : C.ink;
+      cell.textContent = v;
+      cell.title = `${l} × ${m} — ${v} exemplars (${pct(v, total)}% of filtered)`;
+      cell.addEventListener('click', () => {
+        if (v > 0) { F.lcg.clear(); F.major.clear(); F.lcg.add(l); F.major.add(m); refreshAll(); }
+      });
+      attachTooltip(cell, () => ({ title: `${l} × ${m}`, body: `${v} exemplars · ${pct(v, total)}% of filtered` }));
+      wrap.appendChild(cell);
+    });
+  });
+}
+
+function buildMinorGrouped() {
+  const rows = applyFilters();
+  const total = rows.length;
+  const sel = document.getElementById('selMinorParent');
+  const parent = sel.value || '__ALL__';
+  // Build minor list based on parent
+  let minors;
+  if (parent === '__ALL__') {
+    // top 12 minors in filtered set
+    const byMinor = {};
+    rows.forEach(r => byMinor[r.m] = (byMinor[r.m]||0) + 1);
+    minors = Object.entries(byMinor).sort((a,b) => b[1]-a[1]).slice(0, 12).map(e => e[0]);
+  } else {
+    minors = MINORS_BY_MAJOR[parent] || [];
+  }
+  const datasets = LCG_ORDER.map(l => ({
+    label: l,
+    data: minors.map(mn => rows.filter(r => r.m===mn && r.l===l).length),
+    backgroundColor: C.lcg[l],
+    borderRadius: 3, borderSkipped: false,
+  }));
+  destroyChart('minorGrp');
+  const ctx = document.getElementById('cMinorGrp');
+  const empty = !minors.length || !total;
+  toggleEmpty(ctx, empty);
+  if (empty) return;
+  CH.minorGrp = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: minors, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 14 } },
+        tooltip: {
+          callbacks: {
+            label: c => `${c.dataset.label}: ${c.parsed.x} exemplars`,
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: C.lineSoft }, ticks: { precision: 0 } },
+        y: { grid: { display: false }, ticks: { font: { size: 10.5 } } }
+      },
+      onClick: (_, els) => { if (els[0]) { toggleSet(F.minor, minors[els[0].index]); refreshAll(); } }
+    }
+  });
+  dataViewTable('cMinorGrp_dv',
+    [['Minor', ...LCG_ORDER]],
+    minors.map(mn => [mn, ...LCG_ORDER.map(l => rows.filter(r => r.m===mn && r.l===l).length)]));
+}
+
+function buildHeatWeekMajor() {
+  const rows = applyFilters();
+  const weeks = [1,2,3,4,5,6,7,9,10,11,12];
+  const wrap = document.getElementById('heatWM');
+  const total = rows.length;
+  wrap.innerHTML = '';
+  wrap.style.gridTemplateColumns = `170px repeat(${weeks.length}, 1fr)`;
+  wrap.style.gridTemplateRows = `auto repeat(${MAJOR_ORDER.length}, 1fr)`;
+
+  const corner = document.createElement('div'); corner.className='heat-corner';
+  wrap.appendChild(corner);
+  weeks.forEach(w => {
+    const c = document.createElement('div'); c.className='heat-col-lbl';
+    c.textContent = `W${w}`;
+    wrap.appendChild(c);
+  });
+
+  const maxV = Math.max(1, ...MAJOR_ORDER.flatMap(m => weeks.map(w => rows.filter(r=>r.w===w&&r.M===m).length)));
+
+  MAJOR_ORDER.forEach(m => {
+    const lbl = document.createElement('div'); lbl.className='heat-row-lbl';
+    lbl.innerHTML = `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${C.major[m]};margin-right:6px"></span>${m}`;
+    wrap.appendChild(lbl);
+    weeks.forEach(w => {
+      const v = rows.filter(r => r.w===w && r.M===m).length;
+      const cell = document.createElement('div'); cell.className='heat-cell'; cell.dataset.v = v;
+      const alpha = v === 0 ? 0 : 0.15 + 0.85 * (v / maxV);
+      cell.style.background = v === 0 ? '' : hexAlpha(C.major[m], alpha);
+      cell.style.color = v / maxV > 0.5 ? '#fff' : C.ink;
+      cell.textContent = v;
+      cell.addEventListener('click', () => {
+        if (v > 0) { F.week.clear(); F.major.clear(); F.week.add(w); F.major.add(m); refreshAll(); }
+      });
+      attachTooltip(cell, () => ({ title: `${m} · Week ${w}`, body: `${v} exemplars · ${pct(v, total)}% of filtered` }));
+      wrap.appendChild(cell);
+    });
+  });
+}
+
+function buildVerbBubble() {
+  const rows = applyFilters();
+  const verbFreq = {}; // verb -> { n, majorCounts: {...} }
+  rows.forEach(r => {
+    r.v.forEach(v => {
+      if (!verbFreq[v]) verbFreq[v] = { n: 0, majors: {} };
+      verbFreq[v].n += 1;
+      verbFreq[v].majors[r.M] = (verbFreq[v].majors[r.M] || 0) + 1;
+    });
+  });
+  const items = Object.entries(verbFreq).map(([v, obj]) => {
+    const dom = Object.entries(obj.majors).sort((a,b) => b[1]-a[1])[0];
+    return { verb: v, n: obj.n, major: dom ? dom[0] : 'Foundational Knowledge' };
+  }).sort((a,b) => b.n - a.n).slice(0, 40);
+
+  // Lay out as a grid-like bubble chart with x as index, y as category, size scaled.
+  // Simpler: arrange items in clustered positions — one dataset per major for legend.
+  const data = items.map((it, i) => ({
+    x: (i % 10) + 1,
+    y: Math.floor(i / 10) + 1,
+    r: 6 + Math.sqrt(it.n) * 6,
+    verb: it.verb, n: it.n, major: it.major
+  }));
+
+  // One dataset per Major so the legend is meaningful
+  const datasets = MAJOR_ORDER.map(m => ({
+    label: m,
+    data: data.filter(d => d.major === m),
+    backgroundColor: hexAlpha(C.major[m], .7),
+    borderColor: C.major[m], borderWidth: 1.5,
+  }));
+
+  destroyChart('verb');
+  const ctx = document.getElementById('cVerb');
+  toggleEmpty(ctx, items.length === 0);
+  if (!items.length) return;
+  CH.verb = new Chart(ctx, {
+    type: 'bubble',
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 10, font: { size: 10 } } },
+        tooltip: {
+          callbacks: {
+            title: items => items[0].raw.verb,
+            label: item => {
+              const d = item.raw;
+              return [`Occurrences: ${d.n}`, `Parent: ${d.major}`];
+            }
+          }
+        }
+      },
+      scales: {
+        x: { display: false, min: 0, max: 11 },
+        y: { display: false, min: 0, max: Math.max(4.5, Math.ceil(data.length / 10) + .5) }
+      },
+      onClick: (_, els) => {
+        if (els[0]) {
+          const d = els[0].element.$context.raw;
+          toggleSet(F.verb, d.verb);
+          refreshAll();
+        }
+      },
+      onHover: (e, els) => { e.native.target.style.cursor = els[0] ? 'pointer' : 'default'; }
+    },
+    plugins: [{
+      id: 'verbLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        ctx.save();
+        chart.data.datasets.forEach((ds, dsIdx) => {
+          const meta = chart.getDatasetMeta(dsIdx);
+          ds.data.forEach((pt, idx) => {
+            const el = meta.data[idx]; if (!el) return;
+            if (pt.r < 13) return;
+            ctx.fillStyle = '#fff';
+            ctx.font = `600 ${Math.min(11, pt.r * 0.45)}px Inter`;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            const { x, y } = el.getProps(['x','y']);
+            if (pt.r > 18) {
+              ctx.fillText(pt.verb, x, y - 4);
+              ctx.font = `500 ${Math.min(10, pt.r * 0.35)}px 'IBM Plex Mono'`;
+              ctx.fillText(pt.n, x, y + 8);
+            } else {
+              ctx.fillText(pt.verb, x, y);
+            }
+          });
+        });
+        ctx.restore();
+      }
+    }]
+  });
+  dataViewTable('cVerb_dv',
+    [['Verb','Occurrences','Dominant Major Category']],
+    items.map(it => [it.verb, it.n, it.major]));
+}
+
+function buildParticipant() {
+  const rows = applyFilters();
+  const holder = document.getElementById('ppChart');
+  holder.innerHTML = '';
+  if (!rows.length) { holder.innerHTML = `<div class="empty" style="position:relative">No exemplars match the current filters</div>`; return; }
+  const byP = {};
+  rows.forEach(r => {
+    if (!byP[r.p]) byP[r.p] = { total: 0, Learn: 0, Change: 0, Grow: 0 };
+    byP[r.p].total += 1; byP[r.p][r.l] += 1;
+  });
+  const arr = Object.entries(byP).sort((a,b) => b[1].total - a[1].total);
+  const max = arr[0][1].total;
+  arr.forEach(([pid, v]) => {
+    const row = document.createElement('div'); row.className = 'pp-row';
+    const l = document.createElement('div'); l.className='pp-id'; l.textContent = pid;
+    const bar = document.createElement('div'); bar.className='pp-bar';
+    LCG_ORDER.forEach(lcg => {
+      if (v[lcg] > 0) {
+        const seg = document.createElement('div'); seg.className = 'pp-seg';
+        seg.style.width = `${(v[lcg] / max) * 100}%`;
+        seg.style.background = C.lcg[lcg];
+        seg.title = `${lcg}: ${v[lcg]}`;
+        attachTooltip(seg, () => ({ title: `Participant ${pid} · ${lcg}`, body: `${v[lcg]} exemplars` }));
+        bar.appendChild(seg);
+      }
+    });
+    const n = document.createElement('div'); n.className='pp-count'; n.textContent = v.total;
+    row.appendChild(l); row.appendChild(bar); row.appendChild(n);
+    holder.appendChild(row);
+  });
+}
+
+// ============================= EVIDENCE GALLERY =============================
+const EV = { shown: 9, pageSize: 9, sort: 'id' };
+function renderEvidence() {
+  const rows = applyFilters();
+  const holder = document.getElementById('evidenceGrid');
+  holder.innerHTML = '';
+
+  if (!rows.length) {
+    holder.innerHTML = `<div class="ev-empty">No exemplars match the current filters. Clear a filter to see evidence.</div>`;
+    document.getElementById('evInfo').textContent = '';
+    document.getElementById('evLoadMore').style.display = 'none';
+    document.getElementById('evShowAll').style.display = 'none';
+    return;
+  }
+
+  // Sort
+  const sorted = rows.slice().sort((a, b) => {
+    switch (EV.sort) {
+      case 'week': return a.w - b.w || a.id.localeCompare(b.id);
+      case 'week-desc': return b.w - a.w || a.id.localeCompare(b.id);
+      case 'major': return a.M.localeCompare(b.M) || a.id.localeCompare(b.id);
+      case 'participant': {
+        const na = /^\d+$/.test(a.p), nb = /^\d+$/.test(b.p);
+        if (na && nb) return parseInt(a.p) - parseInt(b.p);
+        if (na) return -1; if (nb) return 1;
+        return a.p.localeCompare(b.p);
+      }
+      case 'length': return (b.x || '').length - (a.x || '').length;
+      default: return a.id.localeCompare(b.id, 'en', { numeric: true });
+    }
+  });
+
+  const visible = sorted.slice(0, EV.shown);
+  visible.forEach(r => holder.appendChild(buildEvidenceCard(r)));
+
+  // Controls
+  document.getElementById('evInfo').textContent =
+    `Showing ${visible.length} of ${sorted.length} exemplar${sorted.length===1?'':'s'}`;
+  const loadBtn = document.getElementById('evLoadMore');
+  const allBtn = document.getElementById('evShowAll');
+  if (visible.length < sorted.length) {
+    loadBtn.style.display = ''; allBtn.style.display = '';
+  } else {
+    loadBtn.style.display = 'none'; allBtn.style.display = 'none';
+  }
+}
+
+function buildEvidenceCard(r) {
+  const card = document.createElement('article');
+  card.className = 'ev-card';
+  card.style.setProperty('--ev-accent', C.major[r.M]);
+
+  const dualBadge = r.d ? '<span class="ev-dual-badge">Dual</span>' : '';
+  const dualLine = r.d && r.dc
+    ? `<div class="ev-dual-line"><strong>Secondary code:</strong> ${escapeHtml(r.dc)}</div>`
+    : '';
+
+  const verbsHtml = r.v.map(v => `<span class="ev-verb">${escapeHtml(v)}</span>`).join('');
+
+  const needsClip = (r.x || '').length > 280;
+  const expandHtml = needsClip
+    ? `<span class="ev-expand" data-act="toggle-quote">Read full excerpt</span>`
+    : '';
+
+  card.innerHTML = `
+    <div class="ev-head">
+      <span class="ev-id">${escapeHtml(r.id)}</span>
+      <span class="ev-meta">P${escapeHtml(r.p)} · W${r.w}</span>
+      ${dualBadge}
+      <div class="ev-tags">
+        <span class="ev-tag" style="background:${hexAlpha(C.lcg[r.l], .18)}; color:${C.lcg[r.l]}">${r.l}</span>
+        <span class="ev-tag" style="background:${hexAlpha(C.major[r.M], .15)}; color:${C.major[r.M]}">${escapeHtml(r.M)}</span>
+      </div>
+    </div>
+    <div class="ev-minor">${escapeHtml(r.m)}</div>
+    <blockquote class="ev-quote${needsClip ? ' clipped' : ''}">${escapeHtml(r.x)}</blockquote>
+    ${expandHtml}
+    ${r.r ? `<div class="ev-rationale">
+      <h6>Coder rationale</h6>
+      ${escapeHtml(r.r)}
+    </div>` : ''}
+    ${verbsHtml ? `<div class="ev-verbs">${verbsHtml}</div>` : ''}
+    ${dualLine}
+  `;
+
+  // Wire up expand toggle
+  const expandBtn = card.querySelector('[data-act="toggle-quote"]');
+  if (expandBtn) {
+    expandBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const q = card.querySelector('.ev-quote');
+      const clipped = q.classList.toggle('clipped');
+      expandBtn.textContent = clipped ? 'Read full excerpt' : 'Show less';
+    });
+  }
+  return card;
+}
+
+document.getElementById('evSort').addEventListener('change', e => {
+  EV.sort = e.target.value; renderEvidence();
+});
+document.getElementById('evLoadMore').addEventListener('click', () => {
+  EV.shown += EV.pageSize; renderEvidence();
+});
+document.getElementById('evShowAll').addEventListener('click', () => {
+  EV.shown = 9999; renderEvidence();
+});
+
+// ============================= DATA TABLE =============================
+const TBL = { sort: { col: 'id', asc: true }, page: 1, pageSize: 10, search: '' };
+function renderTable(){
+  const rows = applyFilters();
+  let filtered = rows;
+  const q = TBL.search.trim().toLowerCase();
+  if (q) {
+    filtered = rows.filter(r =>
+      r.id.toLowerCase().includes(q) ||
+      r.x.toLowerCase().includes(q) ||
+      r.r.toLowerCase().includes(q) ||
+      r.v.join(' ').toLowerCase().includes(q) ||
+      r.m.toLowerCase().includes(q) ||
+      r.M.toLowerCase().includes(q) ||
+      r.p.toLowerCase().includes(q) ||
+      r.l.toLowerCase().includes(q)
+    );
+  }
+  const sorted = filtered.slice().sort((a,b) => {
+    const col = TBL.sort.col;
+    let va = a[col], vb = b[col];
+    if (col === 'v') { va = va.join(', '); vb = vb.join(', '); }
+    if (col === 'w') return (TBL.sort.asc ? 1 : -1) * (va - vb);
+    return (TBL.sort.asc ? 1 : -1) * String(va).localeCompare(String(vb), 'en', { numeric: true });
+  });
+  const totalPages = Math.max(1, Math.ceil(sorted.length / TBL.pageSize));
+  if (TBL.page > totalPages) TBL.page = totalPages;
+  const start = (TBL.page - 1) * TBL.pageSize;
+  const pageRows = sorted.slice(start, start + TBL.pageSize);
+
+  const body = document.getElementById('dtbody');
+  body.innerHTML = '';
+  if (!pageRows.length) {
+    body.innerHTML = `<tr><td colspan="8" style="padding:28px; text-align:center; color:var(--ink-mute); font-style:italic;">No exemplars match the current filters${q ? ' and search' : ''}.</td></tr>`;
+  } else {
+    pageRows.forEach((r, idx) => {
+      const tr = document.createElement('tr');
+      const excerptPreview = (r.x || '').length > 110
+        ? escapeHtml(r.x.slice(0, 108)) + '…'
+        : escapeHtml(r.x || '');
+      tr.innerHTML = `
+        <td class="idcol">${r.id}${r.d ? '<span class="dual-badge">D</span>' : ''}</td>
+        <td>${r.p}</td>
+        <td class="num-cell">W${r.w}</td>
+        <td><span class="tag" style="background:${hexAlpha(C.lcg[r.l], .18)}; color:${C.lcg[r.l]}">${r.l}</span></td>
+        <td><span class="tag" style="background:${hexAlpha(C.major[r.M], .15)}; color:${C.major[r.M]}">${r.M}</span></td>
+        <td style="font-size:12px; color:var(--ink-soft)">${r.m}</td>
+        <td style="font-size:11.5px; color:var(--ink-soft); font-family:var(--font-mono)">${r.v.slice(0,3).join(', ')}${r.v.length > 3 ? ' …' : ''}</td>
+        <td class="excerpt-cell"><span class="excerpt-quote">&ldquo;${excerptPreview}&rdquo;</span></td>
+      `;
+      tr.addEventListener('click', () => toggleExpand(tr, r));
+      body.appendChild(tr);
+    });
+  }
+
+  document.getElementById('tblCount').textContent = `${filtered.length} row${filtered.length===1?'':'s'}`;
+  document.querySelectorAll('#dtable thead th').forEach(th => {
+    th.classList.remove('sorted','asc');
+    if (th.dataset.col === TBL.sort.col) { th.classList.add('sorted'); if (TBL.sort.asc) th.classList.add('asc'); }
+  });
+
+  // Pager
+  const info = document.getElementById('pagerInfo');
+  info.textContent = filtered.length ? `Showing ${start+1}–${Math.min(start+TBL.pageSize, filtered.length)} of ${filtered.length}` : '';
+  const pb = document.getElementById('pagerBtns');
+  pb.innerHTML = '';
+  const mkBtn = (label, onClick, opts={}) => {
+    const b = document.createElement('button'); b.className='pager-btn' + (opts.active ? ' active' : '');
+    b.textContent = label; b.disabled = !!opts.disabled;
+    if (onClick) b.addEventListener('click', onClick);
+    return b;
+  };
+  pb.appendChild(mkBtn('‹', () => { TBL.page--; renderTable(); }, { disabled: TBL.page === 1 }));
+  const maxBtns = 5;
+  let startP = Math.max(1, TBL.page - 2), endP = Math.min(totalPages, startP + maxBtns - 1);
+  startP = Math.max(1, endP - maxBtns + 1);
+  for (let i=startP; i<=endP; i++) {
+    pb.appendChild(mkBtn(i, () => { TBL.page = i; renderTable(); }, { active: i === TBL.page }));
+  }
+  pb.appendChild(mkBtn('›', () => { TBL.page++; renderTable(); }, { disabled: TBL.page === totalPages }));
+}
+function toggleExpand(tr, r){
+  const next = tr.nextElementSibling;
+  if (next && next.classList.contains('row-expand')) { next.remove(); return; }
+  // Remove any other expanded row
+  document.querySelectorAll('.row-expand').forEach(e => e.remove());
+  const ex = document.createElement('tr'); ex.className = 'row-expand';
+  const dualHtml = r.d ? `<div class="expand-dual"><strong>Dual code:</strong> ${r.dc}</div>` : '';
+  ex.innerHTML = `<td colspan="8"><div class="expand-grid">
+    <div class="expand-block">
+      <h5>Verbatim reflection excerpt</h5>
+      <p>&ldquo;${escapeHtml(r.x)}&rdquo;</p>
+    </div>
+    <div class="expand-block">
+      <h5>Coder rationale</h5>
+      <p class="rationale">${escapeHtml(r.r)}</p>
+    </div>
+    ${dualHtml}
+  </div></td>`;
+  tr.after(ex);
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+document.getElementById('dtable').addEventListener('click', e => {
+  const th = e.target.closest('th[data-col]');
+  if (!th) return;
+  const col = th.dataset.col;
+  if (TBL.sort.col === col) TBL.sort.asc = !TBL.sort.asc; else { TBL.sort.col = col; TBL.sort.asc = true; }
+  TBL.page = 1;
+  renderTable();
+});
+document.getElementById('tblSearch').addEventListener('input', e => { TBL.search = e.target.value; TBL.page = 1; renderTable(); });
+
+// ============================= UTILS =============================
+function hexAlpha(hex, a) {
+  const h = hex.replace('#','');
+  const full = h.length === 3 ? h.split('').map(c => c+c).join('') : h;
+  const r = parseInt(full.slice(0,2), 16), g = parseInt(full.slice(2,4), 16), b = parseInt(full.slice(4,6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+function toggleEmpty(canvas, empty) {
+  const card = canvas.closest('.card-body');
+  const old = card.querySelector('.empty');
+  if (empty && !old) {
+    const e = document.createElement('div'); e.className='empty'; e.textContent = 'No exemplars match the current filters';
+    card.appendChild(e);
+    canvas.style.display = 'none';
+  } else if (!empty) {
+    if (old) old.remove();
+    canvas.style.display = '';
+  }
+}
+function dataViewTable(id, headers, rows) {
+  const wrap = document.getElementById(id); if (!wrap) return;
+  wrap.innerHTML = `<table><thead><tr>${headers[0].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${
+    rows.map(r => `<tr>${r.map((v,i) => `<td class="${i>0?'num-cell':''}">${v}</td>`).join('')}</tr>`).join('')
+  }</tbody></table>`;
+}
+
+// ============================= TOOLTIP =============================
+const TT = document.getElementById('tt');
+function attachTooltip(el, getContent) {
+  el.addEventListener('mouseenter', () => {
+    const c = getContent(); TT.innerHTML = `<div class="tt-ttl">${c.title}</div>${c.body ? `<div class="tt-sub">${c.body}</div>` : ''}`;
+    TT.classList.add('show');
+  });
+  el.addEventListener('mousemove', (e) => {
+    const pad = 14; let x = e.clientX + pad; let y = e.clientY + pad;
+    if (x + TT.offsetWidth > window.innerWidth - 10) x = e.clientX - TT.offsetWidth - pad;
+    if (y + TT.offsetHeight > window.innerHeight - 10) y = e.clientY - TT.offsetHeight - pad;
+    TT.style.left = x + 'px'; TT.style.top = y + 'px';
+  });
+  el.addEventListener('mouseleave', () => TT.classList.remove('show'));
+}
+
+// ============================= CARD ACTIONS (data view, PNG, CSV) =============================
+function injectCardActions() {
+  document.querySelectorAll('.card[data-chart]').forEach(card => {
+    const actions = card.querySelector('.card-actions'); if (!actions) return;
+    if (actions.dataset.ready) return;
+    actions.dataset.ready = '1';
+    const chartId = card.dataset.chart;
+    // Data toggle
+    const dv = card.querySelector('.data-view');
+    if (dv) {
+      const b1 = document.createElement('button'); b1.className='card-action'; b1.title='View data';
+      b1.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`;
+      b1.addEventListener('click', () => {
+        const canvas = card.querySelector('canvas');
+        const isShowing = dv.classList.toggle('show');
+        if (canvas) canvas.style.display = isShowing ? 'none' : '';
+      });
+      actions.appendChild(b1);
+    }
+    // PNG
+    const canvas = card.querySelector('canvas');
+    if (canvas) {
+      const b2 = document.createElement('button'); b2.className='card-action'; b2.title='Download PNG';
+      b2.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+      b2.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = chartId + '.png'; link.href = canvas.toDataURL('image/png', 1);
+        link.click(); showToast('Chart exported to PNG');
+      });
+      actions.appendChild(b2);
+    }
+  });
+}
+
+// ============================= CSV EXPORT =============================
+document.getElementById('btnExportCsv').addEventListener('click', () => {
+  const rows = applyFilters();
+  const header = ['Code ID','Participant','Week','LCG Prompt','Major Category','Minor Category','Verb Indicators','Dual-Code Flag','Dual-Code Category','Verbatim Excerpt','Coder Rationale'];
+  const lines = [header.map(csvField).join(',')];
+  rows.forEach(r => {
+    lines.push([r.id, r.p, r.w, r.l, r.M, r.m, r.v.join('; '), r.d?'Y':'N', r.dc, r.x, r.r].map(csvField).join(','));
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `LCG_Fink_Exemplars_${rows.length}${hasAnyFilters()?'_filtered':''}.csv`;
+  a.click();
+  showToast(`Exported ${rows.length} exemplar${rows.length===1?'':'s'} to CSV`);
+});
+function csvField(v) {
+  const s = String(v == null ? '' : v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+}
+
+// ============================= TOAST =============================
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg;
+  t.classList.add('show'); clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+// ============================= THEME =============================
+document.getElementById('btnTheme').addEventListener('click', () => {
+  const cur = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = cur;
+  document.getElementById('icoSun').style.display = cur === 'dark' ? 'none' : '';
+  document.getElementById('icoMoon').style.display = cur === 'dark' ? '' : 'none';
+  try { localStorage.setItem('lcg-theme', cur); } catch(e){}
+  refreshColors();
+  applyChartDefaults();
+  refreshAll();
+});
+try {
+  const saved = localStorage.getItem('lcg-theme');
+  if (saved === 'dark') {
+    document.documentElement.dataset.theme = 'dark';
+    document.getElementById('icoSun').style.display = 'none';
+    document.getElementById('icoMoon').style.display = '';
+    refreshColors();
+  }
+} catch(e) {}
+
+// ============================= MINOR PARENT SELECTOR =============================
+(function initMinorParent(){
+  const sel = document.getElementById('selMinorParent');
+  MAJOR_ORDER.forEach(m => {
+    const o = document.createElement('option'); o.value = m; o.textContent = m;
+    sel.appendChild(o);
+  });
+  sel.addEventListener('change', buildMinorGrouped);
+})();
+
+// ============================= TOP-LEVEL REFRESH =============================
+function refreshAll() {
+  updateDdButtons();
+  renderChips();
+  renderKpis();
+  renderInsights();
+  buildLcgDonut();
+  buildMajorBar();
+  buildTreemap();
+  buildWeekLcg();
+  buildWeekMajor();
+  buildSmallMultiples();
+  buildHeatLcgMajor();
+  buildMinorGrouped();
+  buildHeatWeekMajor();
+  buildVerbBubble();
+  buildParticipant();
+  EV.shown = EV.pageSize; // reset gallery pagination whenever filters change
+  renderEvidence();
+  renderTable();
+  injectCardActions();
+}
+
+// Init
+buildDropdowns();
+refreshAll();
+
+// Footer timestamp
+document.getElementById('footTs').textContent = `${RAW.length} exemplars loaded · rendered ${new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`;
+
+// Handle resize
+let rt; window.addEventListener('resize', () => {
+  clearTimeout(rt); rt = setTimeout(() => {
+    Object.values(CH).forEach(c => c && c.resize && c.resize());
+  }, 150);
+});
+</script>
+</body>
+</html>

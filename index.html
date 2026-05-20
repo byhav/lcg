@@ -916,8 +916,8 @@ input, select { font-family: inherit; color: inherit; }
     <div class="card" data-chart="weekMajor">
       <div class="card-head">
         <div class="card-title-wrap">
-          <h3 class="card-title">Weekly exemplars by Major Category</h3>
-          <div class="card-cap">Multi-line — six Fink categories tracked week by week.</div>
+          <h3 class="card-title">Weekly exemplar volume, stacked by Major Category</h3>
+          <div class="card-cap">Stacked area — six Fink categories tracked week by week. Week 8 has no exemplars.</div>
         </div>
         <div class="card-actions"></div>
       </div>
@@ -1694,34 +1694,37 @@ function buildWeekLcg() {
 
 function buildWeekMajor() {
   const rows = applyFilters();
+  const total = rows.length;
   const weeks = [1,2,3,4,5,6,7,9,10,11,12];
   const datasets = MAJOR_ORDER.map(m => ({
     label: m,
     data: weeks.map(w => rows.filter(r => r.w === w && r.M === m).length),
-    borderColor: C.major[m], backgroundColor: C.major[m],
-    borderWidth: 2, tension: .3, pointRadius: 2, pointHoverRadius: 5, fill: false
+    backgroundColor: hexAlpha(C.major[m], .55),
+    borderColor: C.major[m], borderWidth: 2,
+    fill: true, tension: .35, pointRadius: 2.5, pointHoverRadius: 5
   }));
   destroyChart('weekMajor');
   const ctx = document.getElementById('cWeekMajor');
-  toggleEmpty(ctx, rows.length === 0);
-  if (!rows.length) return;
+  toggleEmpty(ctx, total === 0);
+  if (!total) return;
   CH.weekMajor = new Chart(ctx, {
     type: 'line',
     data: { labels: weeks.map(w => `W${w}`), datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
-      interaction: { mode: 'nearest', intersect: false },
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { position: 'bottom', labels: { padding: 10, font: { size: 10.5 } } },
         tooltip: {
           callbacks: {
             title: items => `Week ${items[0].label.slice(1)}`,
+            label: c => `${c.dataset.label}: ${c.parsed.y}`,
           }
         }
       },
       scales: {
-        x: { grid: { display: false } },
-        y: { grid: { color: C.lineSoft }, ticks: { precision: 0 } }
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, grid: { color: C.lineSoft }, ticks: { precision: 0 } }
       }
     }
   });
@@ -1987,7 +1990,7 @@ function buildVerbBubble() {
           ds.data.forEach((pt, idx) => {
             const el = meta.data[idx]; if (!el) return;
             if (pt.r < 13) return;
-            ctx.fillStyle = '#fff';
+            ctx.fillStyle = '#000';
             ctx.font = `600 ${Math.min(11, pt.r * 0.45)}px Inter`;
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             const { x, y } = el.getProps(['x','y']);
